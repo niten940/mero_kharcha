@@ -1,27 +1,18 @@
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import create_engine
 from dotenv import load_dotenv
-import psycopg2
 import os
+from urllib.parse import quote_plus
 
-def get_connection():
-    """
-    Creates and returns a connection to the mero_kharcha PostgreSQL database.
-    
-    Returns: connection: A psycopg2 connection object to the mero_kharcha database.
-    
-    """
+load_dotenv(".env")
+password = quote_plus(os.getenv('DB_PASSWORD'))
+engine = create_engine(f"postgresql+psycopg://{os.getenv('DB_USER')}:{password}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}")
 
-    load_dotenv(".env")
-    conn = psycopg2.connect(host = os.getenv("DB_HOST"), port = os.getenv("DB_PORT") , dbname = os.getenv("DB_NAME"), user= os.getenv("DB_USER"), password= os.getenv("DB_PASSWORD"))
-    return conn
+SessionLocal = sessionmaker(bind=engine)
 
-if __name__ == "__main__":
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT current_database()")
-    result = cursor.fetchone()
-
-    print(f"Current Database: {result}")
-    cursor.close()
-    conn.close()
-    print("Connection closed.")
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
