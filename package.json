@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@quasar/extras": "^2.0.2",
+    "quasar": "^2.21.2"
+  }
+}
