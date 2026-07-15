@@ -1,9 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from routers import expenses, incomes
-
-if __name__ == "__main__":
-    uvicorn.run(app="main:app",host="0.0.0.0",port=3000,reload=True)
+from JWT_Authentication import auth
 
 app = FastAPI(
     title="Mero Kharcha",
@@ -13,6 +11,7 @@ app = FastAPI(
 
 app.include_router(expenses.router_expense,prefix="/expenses", tags=["Expenses"])
 app.include_router(incomes.router_income,prefix="/incomes", tags=["Incomes"])
+app.include_router(auth.router_login, prefix="/auth_login", tags=["Auth"])
 
 @app.get("/")
 def read_root():
@@ -28,3 +27,6 @@ def get_status():
     Returns the API name and current running status.
     """
     return {"api": "Mero-Kharcha", "status": "running"}
+    
+if __name__ == "__main__":
+    uvicorn.run(app="main:app",host="0.0.0.0",port=3000,reload=True)

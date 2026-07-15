@@ -28,16 +28,16 @@ def verify_password(verified_pass,hashed):
 
 password = "mySecret123"
 hash_pass = hash_password(password)
-print(f"Hashed Password: {hash_pass}")
+# print(f"Hashed Password: {hash_pass}")
 
-verified_password = "mySecret123"
-if verify_password(verified_password, hash_pass): 
-    print("Correct password check: True")
-else:
-    print("Wrong password check: False")
+test_password = "Paisa#Deu"
+# if verify_password(verified_password, hash_pass): 
+#     print("Correct password check: True")
+# else:
+#     print("Wrong password check: False")
 
-verified_password = "wrongPassword"
-if verify_password(verified_password, hash_pass): 
-    print("Correct password check: True")
-else:
-    print("Wrong password check: False")
+# verified_password = "wrongPassword"
+# if verify_password(verified_password, hash_pass): 
+#     print("Correct password check: True")
+# else:
+#     print("Wrong password check: False")
