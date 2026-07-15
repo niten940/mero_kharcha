@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 from urllib.parse import quote_plus
 
-load_dotenv(".env")
+load_dotenv(r"D:\mero_kharcha\backend\.env")
 password = quote_plus(os.getenv('DB_PASSWORD'))
 engine = create_engine(f"postgresql+psycopg://{os.getenv('DB_USER')}:{password}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}")
 
