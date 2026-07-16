@@ -1,12 +1,12 @@
 import uvicorn
 from fastapi import FastAPI
-from routers import expenses, incomes
+from routers import expenses, incomes, budget
 from JWT_Authentication import auth
 
 app = FastAPI(
     title="Mero Kharcha",
     version="1.0.0",
-    description="Organizational expense tracking system. Manage expenses, incomes, budgets, and department-wise reports. Built with FastAPI and PostgreSQL."
+    description="Personal expense tracking system. Manage expenses, incomes, budgets, and department-wise reports. Built with FastAPI and PostgreSQL."
 )
 
 app.include_router(expenses.router_expense,prefix="/expenses", tags=["Expenses"])

@@ -2,4 +2,4 @@ pip install "bcrypt==4.0.1" --break-system-packages
 pip install python-jose --break-system-packages
 pip install python-multipart
 pip install "psycopg[binary]"
-
+pip install google-auth --break-system-packages
