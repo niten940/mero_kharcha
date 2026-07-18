@@ -1,8 +1,6 @@
 from sqlalchemy import Column,ForeignKey
 from sqlalchemy import *
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
+from sqlAlchemy.base import Base
 
 class Expenses(Base):
     __tablename__ = "expenses"
