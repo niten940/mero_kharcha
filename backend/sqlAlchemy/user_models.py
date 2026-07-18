@@ -2,9 +2,7 @@
 User model — represents registered users for Mero Kharcha authentication.
 """
 from sqlalchemy import Column, Integer, String, TIMESTAMP, func
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
+from sqlAlchemy.base import Base
 
 class Users(Base):
     """
