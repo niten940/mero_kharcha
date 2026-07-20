@@ -23,18 +23,26 @@ class ExpenseInput(BaseModel):
 @router_expense.get("/{expense_id}",summary="Return expense ID", description="When this API is hit, it returns expense ID")
 def get_expense_ID(expense_id: int, current_user: str = Depends(get_current_user),db: Session = Depends(get_db)):
     """
-    Return single expense_id
-    Return error if expense_id < 1
+    Retrieve expenses detail for the authenticated user.
+
+    Args:
+        expense_id (int): The unique ID of the expense record.
+        current_user (str): The current authenticated user session data.
+        db (Session): The database session dependency.
+
+    Returns:
+        Expenses: existing expenses record
+
+    Raises:
+        HTTPException: 404 if the expense does not exist or belong to the user.
     """
 
-    if expense_id < 1:
-        return JSONResponse(
-            status_code= 404,
-            content= {"error":"Expense not found"}
-        )
+    exp_id = db.query(Expenses).filter(Expenses.user_id == current_user["user_id"], Expenses.id == expense_id).first()
 
-    if Expenses.user_id == current_user["user_id"]:
-        return {"expense_id": expense_id}
+    if exp_id is None:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    return exp_id
 
 @router_expense.get("/", summary="Return list of Expenses rows matching the given filters", description="Returns all expenses, optionally filtered by expense id and/or category")
 def get_expense_Query(category:str | None = None, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):

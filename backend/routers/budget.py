@@ -10,10 +10,11 @@ def check_budget_limit(category: str, limit: float, user_id: int, db: Session) -
     Args:
         category (str): Name of the category to check (case-insensitive).
         limit (float): The budget ceiling to check against.
+        user_id (int): id of the user
         db (Session): The active SQLAlchemy database session.
 
     Returns:
-        A dictionary containing spending totals, budget status, and overage amounts.
+        dict: category, total_spent, limit (total budget allocated for the category), over budget status and amount over the limit.
     """
     total_spent = round(float(db.query(func.sum(Expenses.amount)).filter(Expenses.user_id == user_id, Expenses.category.ilike(category)).scalar() or 0),2)
     over_budget = True if total_spent > limit else False

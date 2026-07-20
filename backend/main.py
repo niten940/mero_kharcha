@@ -1,12 +1,26 @@
 import uvicorn
 from fastapi import FastAPI
-from routers import expenses, incomes, budget
+from routers import expenses, incomes
 from JWT_Authentication import auth
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Mero Kharcha",
     version="1.0.0",
     description="Personal expense tracking system. Manage expenses, incomes, budgets, and department-wise reports. Built with FastAPI and PostgreSQL."
+)
+
+origin = [
+    "http://0.0.0.0:3000",      #FastAPI hosting address
+    "http://localhost:5173",    # default Vue.js hosting address
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origin,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
 app.include_router(expenses.router_expense,prefix="/expenses", tags=["Expenses"])

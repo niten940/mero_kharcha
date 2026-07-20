@@ -1,4 +1,3 @@
-from expense_orm_test import select_operation
 from expense_models import Expenses
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
@@ -31,6 +30,5 @@ def get_total_expenses():
     return total_expense
 
 if __name__ == "__main__":
-    select_operation()
     total_amount = get_total_expenses()
     print(f"Total expenses: Rs.{total_amount:.2f}")
