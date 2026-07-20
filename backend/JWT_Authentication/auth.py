@@ -12,7 +12,10 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-load_dotenv(r"D:\mero_kharcha\backend\.env")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+dotenv_path = os.path.join(BASE_DIR, '.env')
+
+load_dotenv(dotenv_path)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth_login/login")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
