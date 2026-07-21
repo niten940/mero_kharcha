@@ -6,11 +6,14 @@ import os
 from urllib.parse import quote_plus
 
 load_dotenv(".env")
-password = quote_plus(os.getenv('DB_PASSWORD'))
-engine = create_engine(f"postgresql+psycopg2://{os.getenv('DB_USER')}:{password}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}")
+password = quote_plus(os.getenv("DB_PASSWORD"))
+engine = create_engine(
+    f"postgresql+psycopg2://{os.getenv('DB_USER')}:{password}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
+)
 
 Session = sessionmaker(bind=engine)
 session = Session()
+
 
 def get_total_expenses():
     """
@@ -28,6 +31,7 @@ def get_total_expenses():
         total_expense += expense.amount
 
     return total_expense
+
 
 if __name__ == "__main__":
     total_amount = get_total_expenses()
