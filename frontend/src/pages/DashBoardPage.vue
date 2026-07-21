@@ -298,7 +298,7 @@ function setActive (name) {
   } else if (name === 'goals') {
     router.push('/goals')
   } else if (name === 'imports') { // 👈 Changed 'imports' to 'import' to match your navItems list
-    router.push('/import')
+    router.push('/imports')
   } else if (name === 'profile') {
     router.push('/profile')
   }
