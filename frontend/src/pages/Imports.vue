@@ -1,3 +1,15 @@
+Here is the cleaned-up, fully functional Vue 3 component code.
+
+### What Was Fixed:
+
+1. **Duplicate `setActive` Function:** Removed the second duplicate definition that was overriding the navigation logic.
+2. **Missing Router Setup:** Added `import { useRouter } from 'vue-router'` and initialized `const router = useRouter()` so `router.push(...)` works properly without runtime errors.
+
+---
+
+### Cleaned Code
+
+```vue
 <template>
   <q-page class="mk-page">
     <div class="mk-shell">
@@ -133,8 +145,10 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const emit = defineEmits(['open-settings', 'confirm-ingestion', 'reset-parser', 'files-dropped', 'nav-change'])
+const router = useRouter()
 
 const activeNav = ref('import')
 const isDragging = ref(false)
@@ -197,12 +211,23 @@ const totalExpenses = computed(() =>
 const navItems = [
   { name: 'home', label: 'Home', icon: 'home' },
   { name: 'goals', label: 'Goals', icon: 'track_changes' },
-  { name: 'import', label: 'Import', icon: 'description' },
+  { name: 'import', label: 'Imports', icon: 'description' },
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
 function setActive (name) {
   activeNav.value = name
+  emit('nav-change', name)
+
+  if (name === 'home') {
+    router.push('/dashboard')
+  } else if (name === 'goals') {
+    router.push('/goals')
+  } else if (name === 'import') {
+    router.push('/imports')
+  } else if (name === 'profile') {
+    router.push('/profile')
+  }
 }
 
 function triggerBrowse () {
