@@ -9,6 +9,7 @@ import policy from '../pages/PrivacyPage.vue'
 import dashboard from '../pages/DashBoardPage.vue' 
 import goals from '../pages/Goalspage.vue'
 import imports from '../pages/Imports.vue'// Import your terms and conditions page
+import profile from '../pages/ProfilePage.vue' // Import your profile page
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -52,6 +53,11 @@ const router = createRouter({
       path: '/imports',
       name: 'imports',
       component: imports // This is a placeholder for your imports page
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: profile // This is a placeholder for your profile page
     }
   ]
 })

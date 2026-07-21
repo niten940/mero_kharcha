@@ -211,7 +211,7 @@ const totalExpenses = computed(() =>
 const navItems = [
   { name: 'home', label: 'Home', icon: 'home' },
   { name: 'goals', label: 'Goals', icon: 'track_changes' },
-  { name: 'import', label: 'Imports', icon: 'description' },
+  { name: 'imports', label: 'Imports', icon: 'description' },
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
@@ -223,7 +223,7 @@ function setActive (name) {
     router.push('/dashboard')
   } else if (name === 'goals') {
     router.push('/goals')
-  } else if (name === 'import') {
+  } else if (name === 'imports') {
     router.push('/imports')
   } else if (name === 'profile') {
     router.push('/profile')
