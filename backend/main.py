@@ -3,11 +3,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import expenses, incomes, budget
 from JWT_Authentication import auth
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Mero Kharcha",
     version="1.0.0",
-    description="Personal expense tracking system. Manage expenses, incomes, budgets, and department-wise reports. Built with FastAPI and PostgreSQL."
+    description="Personal expense tracking system. Manage expenses, incomes, budgets, and department-wise reports. Built with FastAPI and PostgreSQL.",
 )
 
 # --- Enable CORS Middleware ---

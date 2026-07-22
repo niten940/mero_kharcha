@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 # 1. Load environment variables FIRST before reading os.getenv
 load_dotenv(r"D:\mero_kharcha\backend\.env")
@@ -37,9 +37,6 @@ class RegistrationData(BaseModel):
     nationality: str = None
     age: int = None
     gender: str = None
-
-
-
 def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -56,6 +53,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(
             status_code=401, detail="Error occurred: JWTError occurred."
         )
+
 
 
 def create_access_token(data: dict) -> str:
@@ -76,6 +74,16 @@ def register(
     registration_data: RegistrationData,
     db: Session = Depends(get_db)
 ):
+    """
+    Register a new user account with profile information.
+
+    Args:
+        registration_data (RegistrationData): User registration data including profile fields.
+        db (Session): The database session.
+
+    Returns:
+        dict: A success message confirming account creation and user_id.
+    """
     existing = (
         db.query(Users)
         .filter((Users.username == registration_data.username) | (Users.email == registration_data.email))
@@ -104,11 +112,23 @@ def register(
     return {"message": f"User {registration_data.username} registered successfully", "user_id": new_user.id}
 
 
+
+
 @router_login.post("/login")
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    """
+    Logs in a user and issues a JWT access token.
+
+    Args:
+        form_data (OAuth2PasswordRequestForm): Collects username and password as form data.
+        db (Session): The database session.
+
+    Returns:
+        dict: Contains 'access_token' (str) and 'token_type' (str).
+    """
     user = (
         db.query(Users).filter((Users.username == form_data.username) | (Users.email == form_data.username)).first()
     )

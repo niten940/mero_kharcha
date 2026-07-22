@@ -6,7 +6,11 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
+
 class Users(Base):
+    """
+    Represents a registered user account.
+    """
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(50), unique=True, nullable=False, index=True)
