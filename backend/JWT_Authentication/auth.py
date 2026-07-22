@@ -84,32 +84,45 @@ def register(
     Returns:
         dict: A success message confirming account creation and user_id.
     """
-    existing = (
-        db.query(Users)
-        .filter((Users.username == registration_data.username) | (Users.email == registration_data.email))
-        .first()
-    )
-    if existing:
-        raise HTTPException(
-            status_code=400, detail="Username or email already registered"
+    try:
+        existing = (
+            db.query(Users)
+            .filter((Users.username == registration_data.username) | (Users.email == registration_data.email))
+            .first()
         )
+        if existing:
+            raise HTTPException(
+                status_code=400, detail="Username or email already registered"
+            )
 
-    hashed = hash_password(registration_data.password)
-    new_user = Users(
-        username=registration_data.username,
-        email=registration_data.email,
-        hashed_password=hashed,
-        full_name=registration_data.fullName,
-        phone=registration_data.phone,
-        currency=registration_data.currency,
-        nationality=registration_data.nationality,
-        age=registration_data.age,
-        gender=registration_data.gender
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return {"message": f"User {registration_data.username} registered successfully", "user_id": new_user.id}
+        hashed = hash_password(registration_data.password)
+        new_user = Users(
+            username=registration_data.username,
+            email=registration_data.email,
+            hashed_password=hashed,
+            full_name=registration_data.fullName,
+            phone=registration_data.phone,
+            currency=registration_data.currency,
+            nationality=registration_data.nationality,
+            age=registration_data.age,
+            gender=registration_data.gender
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return {"message": f"User {registration_data.username} registered successfully", "user_id": new_user.id}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Registration error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Registration failed: {str(e)}"
+        )
 
 
 

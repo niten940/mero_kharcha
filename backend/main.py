@@ -1,14 +1,14 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import expenses, incomes, budget
+from routers import expenses, incomes, budget,goals, import_statement, recurring, reports
 from JWT_Authentication import auth
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Mero Kharcha",
     version="1.0.0",
-    description="Personal expense tracking system. Manage expenses, incomes, budgets, and department-wise reports. Built with FastAPI and PostgreSQL.",
+    description="Personal expense tracking system. Manage expenses, incomes, budgets, and category-wise reports. Built with FastAPI and PostgreSQL.",
 )
 
 # --- Enable CORS Middleware ---
@@ -21,9 +21,14 @@ app.add_middleware(
 )
 
 # --- Include Routers ---
+app.include_router(auth.router_login, prefix="/auth_login", tags=["Auth"])
 app.include_router(expenses.router_expense, prefix="/expenses", tags=["Expenses"])
 app.include_router(incomes.router_income, prefix="/incomes", tags=["Incomes"])
-app.include_router(auth.router_login, prefix="/auth_login", tags=["Auth"])
+app.include_router(goals.router_goals, prefix="/goals", tags=["Goals"])
+app.include_router(import_statement.router_imports, prefix="/imports", tags=["Imports"])
+app.include_router(recurring.router_recurring, prefix="/recurring", tags=["Recurring"])
+app.include_router(budget.router_budget, prefix="/budget", tags=["Budget"])
+app.include_router(reports.router_reports, prefix="/reports", tags=["Reports"])
 
 @app.get("/")
 def read_root():

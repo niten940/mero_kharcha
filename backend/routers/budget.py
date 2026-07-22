@@ -1,67 +1,125 @@
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from datetime import date
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from sqlAlchemy.expense_models import Expenses
 from database import get_db
+from JWT_Authentication.auth import get_current_user
+from sqlAlchemy.budget_model import Budget
+from sqlAlchemy.expense_models import Expenses
 
+router_budget = APIRouter()
 
-def check_budget_limit(category: str, limit: float, user_id: int, db: Session) -> dict:
+class BudgetInput(BaseModel):
+    monthly_limit: float
+
+@router_budget.post("/", status_code=201, summary="Set monthly budget limit", description="Creates the user's monthly budget limit. Fails if one already exists — use PUT to update.")
+def create_budget(budget: BudgetInput, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """
-    Calculate category spending and check if it exceeds the budget limit.
+    Create the authenticated user's monthly budget limit.
 
     Args:
-        category (str): Name of the category to check (case-insensitive).
-        limit (float): The budget ceiling to check against.
-        user_id (int): id of the user
-        db (Session): The active SQLAlchemy database session.
+        budget (BudgetInput): The monthly limit payload.
+        current_user (dict): The current authenticated user.
+        db (Session): The database session.
+
+    Raises:
+        HTTPException: 400 if a budget already exists for this user.
 
     Returns:
-        dict: category, total_spent, limit (total budget allocated for the category), over budget status and amount over the limit.
+        Budget: The newly created budget record.
     """
-    total_spent = round(
-        float(
-            db.query(func.sum(Expenses.amount))
-            .filter(Expenses.user_id == user_id, Expenses.category.ilike(category))
-            .scalar()
-            or 0
-        ),
-        2,
-    )
-    over_budget = True if total_spent > limit else False
-    remaining_balance = total_spent - limit
-    amount_over = round(remaining_balance, 2) if total_spent > limit else 0
+    existing = db.query(Budget).filter(Budget.user_id == current_user["user_id"]).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Budget already exists. Use PUT to update it.")
+
+    new_budget = Budget(user_id=current_user["user_id"], monthly_limit=budget.monthly_limit)
+    db.add(new_budget)
+    db.commit()
+    db.refresh(new_budget)
+    return new_budget
+
+@router_budget.get("/", summary="Get the current monthly budget limit", description="Returns the authenticated user's monthly budget limit.")
+def get_budget(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Fetch the authenticated user's monthly budget limit.
+
+    Args:
+        current_user (dict): The current authenticated user.
+        db (Session): The database session.
+
+    Raises:
+        HTTPException: 404 if no budget has been set yet.
+
+    Returns:
+        Budget: The user's budget record.
+    """
+    budget = db.query(Budget).filter(Budget.user_id == current_user["user_id"]).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="No budget set yet.")
+    return budget
+
+@router_budget.put("/", summary="Update the monthly budget limit", description="Updates the authenticated user's monthly budget limit. Returns 404 if none exists yet.")
+def update_budget(budget: BudgetInput, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Update the authenticated user's monthly budget limit.
+
+    Args:
+        budget (BudgetInput): The new monthly limit payload.
+        current_user (dict): The current authenticated user.
+        db (Session): The database session.
+
+    Raises:
+        HTTPException: 404 if no budget exists yet for this user.
+
+    Returns:
+        Budget: The updated budget record.
+    """
+    existing = db.query(Budget).filter(Budget.user_id == current_user["user_id"]).first()
+    if not existing:
+        raise HTTPException(status_code=404, detail="No budget set yet. Use POST to create one.")
+
+    existing.monthly_limit = budget.monthly_limit
+    db.commit()
+    db.refresh(existing)
+    return existing
+
+@router_budget.get("/watchdog", summary="Budget watchdog status", description="Returns current-month total spending against the monthly limit, for the dashboard's Spending Velocity card.")
+def get_budget_watchdog(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Calculate current-month spending against the user's monthly budget limit.
+
+    Args:
+        current_user (dict): The current authenticated user.
+        db (Session): The database session.
+
+    Raises:
+        HTTPException: 404 if no budget has been set yet.
+
+    Returns:
+        dict: monthly_limit, total_spent, spending_percent, remaining, over_budget.
+    """
+    budget = db.query(Budget).filter(Budget.user_id == current_user["user_id"]).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="No budget set yet.")
+
+    month_start = date.today().replace(day=1)
+
+    total_spent = round(float(
+        db.query(func.sum(Expenses.amount))
+        .filter(Expenses.user_id == current_user["user_id"], Expenses.date >= month_start)
+        .scalar() or 0
+    ), 2)
+
+    monthly_limit = float(budget.monthly_limit)
+    spending_percent = round((total_spent / monthly_limit) * 100, 2) if monthly_limit > 0 else 0
+    remaining = round(monthly_limit - total_spent, 2)
+    over_budget = total_spent > monthly_limit
+
     return {
-        "category": category,
+        "monthly_limit": monthly_limit,
         "total_spent": total_spent,
-        "limit": limit,
+        "spending_percent": spending_percent,
+        "remaining": remaining,
         "over_budget": over_budget,
-        "amount_over": amount_over,
     }
-
-
-def get_all_categorys_status(limit: float, db: Session) -> list:
-    """
-    Return budget status for every distinct category with recorded expenses.
-
-    Args:
-        limit (float): The shared budget ceiling applied to every category.
-        db (Session): The active SQLAlchemy database session.
-
-    Returns:
-        list: A list of dicts, one per category, each in the same shape as check_budget_limit's return value.
-    """
-    category_list = db.query(Expenses.category).distinct().all()
-
-    status_list = []
-    for (dept_name,) in category_list:
-        status = check_budget_limit(dept_name, limit, db)
-        status_list.append(status)
-
-    return status_list
-
-
-if __name__ == "__main__":
-    from database import get_db
-
-    db = next(get_db())
-    print(check_budget_limit("Office expenses", 5000, 3, db))
-    print(check_budget_limit("Office expenses", 5000, 1, db))

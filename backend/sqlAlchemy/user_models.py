@@ -12,12 +12,13 @@ class Users(Base):
     Represents a registered user account.
     """
     __tablename__ = "users"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(100), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(100), nullable=True)
+    hashed_password = Column(String(255), nullable=True)
     full_name = Column(String(100), nullable=True)
-    phone = Column(String(20), nullable=True)
+    phone = Column(String(20), nullable=True, index=True)
     currency = Column(String(10), default="NPR", nullable=False)
     nationality = Column(String(50), nullable=True)
     age = Column(Integer, nullable=True)
