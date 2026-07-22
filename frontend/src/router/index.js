@@ -14,15 +14,16 @@ import profile from '../pages/ProfilePage.vue' // Import your profile page
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {
-      path: '/',
-      name: 'signup',
-      component: SignupView // This makes your form the default home page!
-    },
+   
     {
       path: '/login',
       name: 'login',
       component: LoginPageView
+    },
+     {
+      path: '/',
+      name: 'signup',
+      component: SignupView // This makes your form the default home page!
     },
     {
       path: '/reset-password',
