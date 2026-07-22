@@ -22,7 +22,7 @@
               v-model="fullName"
               dense
               outlined
-              placeholder="Aayush Shrestha"
+              placeholder="...Your full name"
               class="mk-input"
               :rules="[val => !!val || 'Full name is required']"
               lazy-rules
@@ -41,7 +41,7 @@
               dense
               outlined
               type="email"
-              placeholder="name@example.com"
+              placeholder="gmail.com"
               class="mk-input"
               :rules="[
                 val => !!val || 'Email is required',
@@ -64,7 +64,7 @@
                 dense
                 outlined
                 type="tel"
-                placeholder="98XXXXXXXX"
+                placeholder="10 digit number"
                 class="mk-input"
                 :rules="[
                   val => !!val || 'Phone number is required',
@@ -125,7 +125,7 @@
                 type="number"
                 dense
                 outlined
-                placeholder="Ex: 25"
+                placeholder="Your age"
                 class="mk-input"
                 :rules="[
                   val => !!val || 'Required',
@@ -282,6 +282,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+import api from '../api'
 
 const router = useRouter()
 const $q = useQuasar()
@@ -362,7 +363,6 @@ const isValid = computed(() => {
     email.value.trim() !== '' &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value) &&
     /^\+?[0-9]{7,15}$/.test(phone.value) &&
-    !!nationality.value &&
     age.value > 0 &&
     !!gender.value &&
     password.value.length >= 8 &&
@@ -378,31 +378,62 @@ async function onSubmit() {
   isLoading.value = true
   
   try {
-    // 1. Simulating your backend network request
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    // 1. Prepare form data for backend registration
+    const registrationData = {
+      username: email.value.split('@')[0], // Use email prefix as username
+      email: email.value,
+      password: password.value,
+      fullName: fullName.value,
+      phone: phone.value,
+      currency: currency.value,
+      nationality: nationality.value,
+      age: age.value,
+      gender: gender.value
+    }
 
-    // 2. Trigger the notification immediately
-    $q.notify({
-      type: 'positive',
-      icon: 'check_circle',
-      message: 'Account Created Successfully!',
-      caption: 'Please log in to verify your registration details.',
-      position: 'top',
-      timeout: 4000
-    })
+    // 2. Send registration request to backend
+    const response = await api.post('/auth_login/register', registrationData)
 
-    // 3. Pause for 800ms so the user can actually process the notification
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    // 3. Check if registration was successful
+    if (response.status === 201 || response.data.message) {
+      // Trigger the notification
+      $q.notify({
+        type: 'positive',
+        icon: 'check_circle',
+        message: 'Account Created Successfully!',
+        caption: 'Please log in to verify your registration details.',
+        position: 'top',
+        timeout: 4000
+      })
 
-    // 4. Smoothly route them over to the verification/login view
-    router.push('/login')
+      // Pause for 800ms so the user can process the notification
+      await new Promise((resolve) => setTimeout(resolve, 800))
+
+      // Route to login view
+      router.push('/login')
+    }
   } catch (error) {
+    console.error('Registration Error:', error)
+    
+    // Extract error message from backend response
+    let errorMessage = 'Failed to create account. Please try again.'
+    
+    if (error.response?.data?.detail) {
+      errorMessage = typeof error.response.data.detail === 'string'
+        ? error.response.data.detail
+        : 'Registration failed. Please check your details.'
+    } else if (error.response?.status === 400) {
+      errorMessage = 'Username or email already registered. Please try another.'
+    } else if (error.message === 'Network Error') {
+      errorMessage = 'Could not connect to backend server. Please try again later.'
+    }
+
     $q.notify({
       type: 'negative',
-      message: 'Failed to create account. Please try again.',
-      position: 'top'
+      message: errorMessage,
+      position: 'top',
+      timeout: 5000
     })
-    console.error(error)
   } finally {
     isLoading.value = false
   }

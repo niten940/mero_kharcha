@@ -9,95 +9,110 @@
           </q-avatar>
           <div class="mk-brand-name">Mero Kharcha</div>
         </div>
-        <q-btn flat round dense icon="settings" color="grey-8" @click="$emit('open-settings')" />
+        <q-btn flat round dense icon="settings" color="grey-8" @click="emit('open-settings')" />
       </div>
 
-      <!-- Balance -->
-      <div class="mk-balance-block">
-        <div class="mk-eyebrow">TOTAL AVAILABLE BALANCE</div>
-        <div class="mk-balance">Rs. {{ formatAmount(totalBalance) }}</div>
-        <div class="mk-date-row">
-          <q-icon name="event" size="14px" />
-          <span>{{ todayLabel }}</span>
-        </div>
+      <!-- Loading Spinner for Dashboard Data -->
+      <div v-if="isLoading" class="text-center q-my-xl">
+        <q-spinner-dots color="primary" size="40px" />
+        <div class="text-caption text-grey-7 q-mt-sm">Syncing your expenses...</div>
       </div>
 
-      <!-- Spending velocity -->
-      <q-card flat class="mk-velocity-card">
-        <q-card-section class="row no-wrap items-start q-gutter-md">
-          <div class="mk-velocity-icon">
-            <q-icon name="speed" size="22px" color="amber-9" />
+      <template v-else>
+        <!-- Balance -->
+        <div class="mk-balance-block">
+          <div class="mk-eyebrow">TOTAL AVAILABLE BALANCE</div>
+          <div class="mk-balance">Rs. {{ formatAmount(totalBalance) }}</div>
+          <div class="mk-date-row">
+            <q-icon name="event" size="14px" />
+            <span>{{ todayLabel }}</span>
           </div>
-          <div class="col">
-            <div class="mk-velocity-title">Spending Velocity</div>
-            <div class="mk-velocity-text">
-              You've spent {{ spendingPercent }}% of your {{ currentMonthLabel }} budget.
-              <span class="mk-velocity-highlight">Take it easy!</span>
+        </div>
+
+        <!-- Spending velocity -->
+        <q-card flat class="mk-velocity-card">
+          <q-card-section class="row no-wrap items-start q-gutter-md">
+            <div class="mk-velocity-icon">
+              <q-icon name="speed" size="22px" color="amber-9" />
             </div>
-            <q-linear-progress
-              :value="spendingPercent / 100"
-              size="8px"
-              rounded
-              track-color="grey-3"
-              color="amber-6"
-              class="q-mt-sm"
-            />
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <!-- My Accounts -->
-      <div class="mk-section-header row items-center justify-between">
-        <div class="mk-section-title">My Accounts</div>
-        <div class="mk-view-all" @click="$emit('view-all-accounts')">VIEW ALL</div>
-      </div>
-
-      <div class="mk-accounts-scroll">
-        <div
-          v-for="account in accounts"
-          :key="account.id"
-          class="mk-account-card"
-          :style="{ background: account.gradient }"
-        >
-          <div class="row items-start justify-between">
-            <div class="mk-account-name">{{ account.name }}</div>
-            <q-icon name="account_balance" size="26px" class="mk-account-icon" />
-          </div>
-          <div class="mk-account-number">{{ account.masked }}</div>
-          <div class="mk-account-bottom">
-            <div class="mk-account-label">BALANCE</div>
-            <div class="mk-account-balance">Rs. {{ formatAmount(account.balance) }}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Transactions -->
-      <div class="mk-section-header row items-center justify-between">
-        <div class="mk-section-title">Recent Transactions</div>
-        <q-btn flat round dense size="sm" icon="tune" color="grey-7" />
-      </div>
-
-      <div class="mk-transactions">
-        <div
-          v-for="tx in transactions"
-          :key="tx.id"
-          class="mk-transaction-row"
-        >
-          <q-avatar size="40px" class="mk-tx-avatar" :style="{ background: tx.iconBg }">
-            <q-icon :name="tx.icon" size="18px" :color="tx.iconColor" />
-          </q-avatar>
-          <div class="col mk-tx-info">
-            <div class="mk-tx-name">{{ tx.name }}</div>
-            <div class="mk-tx-date">{{ tx.date }}</div>
-          </div>
-          <div class="text-right">
-            <div class="mk-tx-amount" :class="tx.amount < 0 ? 'mk-negative' : 'mk-positive'">
-              {{ tx.amount < 0 ? '-' : '+' }} Rs. {{ formatAmount(Math.abs(tx.amount)) }}
+            <div class="col">
+              <div class="mk-velocity-title">Spending Velocity</div>
+              <div class="mk-velocity-text">
+                You've spent {{ spendingPercent }}% of your {{ currentMonthLabel }} budget.
+                <span class="mk-velocity-highlight">
+                  {{ spendingPercent > 80 ? 'Slow down!' : 'Take it easy!' }}
+                </span>
+              </div>
+              <q-linear-progress
+                :value="spendingPercent / 100"
+                size="8px"
+                rounded
+                track-color="grey-3"
+                color="amber-6"
+                class="q-mt-sm"
+              />
             </div>
-            <div class="mk-tx-category">{{ tx.category }}</div>
+          </q-card-section>
+        </q-card>
+
+        <!-- My Accounts -->
+        <div class="mk-section-header row items-center justify-between">
+          <div class="mk-section-title">My Accounts</div>
+          <div class="mk-view-all" @click="goToLinkedAccounts">VIEW ALL</div>
+        </div>
+
+        <div class="mk-accounts-scroll">
+          <div
+            v-for="account in accounts"
+            :key="account.id"
+            class="mk-account-card"
+            :style="{ background: account.gradient || 'linear-gradient(135deg, #0f6b46, #0a4a30)' }"
+          >
+            <div class="row items-start justify-between">
+              <div class="mk-account-name">{{ account.name }}</div>
+              <q-icon name="account_balance" size="26px" class="mk-account-icon" />
+            </div>
+            <div class="mk-account-number">{{ account.masked }}</div>
+            <div class="mk-account-bottom">
+              <div class="mk-account-label">BALANCE</div>
+              <div class="mk-account-balance">Rs. {{ formatAmount(account.balance) }}</div>
+            </div>
           </div>
         </div>
-      </div>
+
+        <!-- Recent Transactions -->
+        <div class="mk-section-header row items-center justify-between">
+          <div class="mk-section-title">Recent Transactions</div>
+          <q-btn flat round dense size="sm" icon="tune" color="grey-7" />
+        </div>
+
+        <div class="mk-transactions">
+          <div
+            v-for="tx in transactions"
+            :key="tx.id"
+            class="mk-transaction-row"
+          >
+            <q-avatar size="40px" class="mk-tx-avatar" :style="{ background: tx.iconBg || '#e7f3ee' }">
+              <q-icon :name="tx.icon || 'receipt'" size="18px" :color="tx.iconColor || 'primary'" />
+            </q-avatar>
+            <div class="col mk-tx-info">
+              <div class="mk-tx-name">{{ tx.name }}</div>
+              <div class="mk-tx-date">{{ tx.date }}</div>
+            </div>
+            <div class="text-right">
+              <div class="mk-tx-amount" :class="tx.amount < 0 ? 'mk-negative' : 'mk-positive'">
+                {{ tx.amount < 0 ? '-' : '+' }} Rs. {{ formatAmount(Math.abs(tx.amount)) }}
+              </div>
+              <div class="mk-tx-category">{{ tx.category }}</div>
+            </div>
+          </div>
+          
+          <!-- Empty State -->
+          <div v-if="transactions.length === 0" class="text-center text-grey-6 q-pa-md">
+            No transactions recorded yet.
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- Floating action button -->
@@ -107,7 +122,7 @@
       icon="add"
       color="primary"
       class="mk-fab"
-      @click="$emit('add-transaction')"
+      @click.stop="goToAddExpense"
     />
 
     <!-- Bottom navigation -->
@@ -128,74 +143,35 @@
   </q-page>
 </template>
 
-<!-- <script setup>
-import { ref } from 'vue'
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+// Replace with your preferred HTTP client (e.g. axios instance configured with base URL & auth headers)
+import axios from 'axios' 
 
-defineEmits(['open-settings', 'view-all-accounts', 'add-transaction', 'nav-change'])
+// Initialize Quasar utilities for notifications/dialogs
+const $q = useQuasar()
+const router = useRouter()
 
+// Emits declaration
+const emit = defineEmits(['open-settings', 'view-all-accounts', 'add-transaction', 'nav-change'])
+
+// ==========================================
+// REACTIVE STATE (Backend Data Containers)
+// ==========================================
+const isLoading = ref(true)
 const activeNav = ref('home')
-const todayLabel = '15 Shrawan 2083'
-const currentMonthLabel = 'Bhadra'
-const totalBalance = 145000
-const spendingPercent = 40
 
-const accounts = ref([
-  {
-    id: 1,
-    name: 'Nabil Bank Ltd.',
-    masked: '**** 4421',
-    balance: 82450,
-    gradient: 'linear-gradient(135deg, #0f6b46, #0a4a30)'
-  },
-  {
-    id: 2,
-    name: 'eSewa',
-    masked: '9841******',
-    balance: 12000,
-    gradient: 'linear-gradient(135deg, #6cc06a, #4a9e4e)'
-  },
-  {
-    id: 3,
-    name: 'Nepal Investment Bank',
-    masked: '**** 7790',
-    balance: 50000,
-    gradient: 'linear-gradient(135deg, #2f6f8f, #1f4e66)'
-  }
-])
+const todayLabel = ref('15 Shrawan 2083')
+const currentMonthLabel = ref('Bhadra')
+const totalBalance = ref(0)
+const spendingPercent = ref(0)
 
-const transactions = ref([
-  {
-    id: 1,
-    name: 'Bhat-Bhateni Supermarket',
-    date: '14 Shrawan 2083',
-    amount: -4250,
-    category: 'Food & Groceries',
-    icon: 'shopping_bag',
-    iconBg: '#e7f3ee',
-    iconColor: 'primary'
-  },
-  {
-    id: 2,
-    name: 'The Bakery Cafe',
-    date: '13 Shrawan 2083',
-    amount: -1200,
-    category: 'Dining',
-    icon: 'restaurant',
-    iconBg: '#fdeee0',
-    iconColor: 'orange-8'
-  },
-  {
-    id: 3,
-    name: 'Salary Deposit',
-    date: '10 Shrawan 2083',
-    amount: 65000,
-    category: 'Income',
-    icon: 'account_balance_wallet',
-    iconBg: '#e7f3ee',
-    iconColor: 'primary'
-  }
-])
+const accounts = ref([])
+const transactions = ref([])
 
+// Static navigation configuration
 const navItems = [
   { name: 'home', label: 'Home', icon: 'home' },
   { name: 'goals', label: 'Goals', icon: 'track_changes' },
@@ -203,111 +179,107 @@ const navItems = [
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
-function setActive (name) {
-  activeNav.value = name
+// ==========================================
+// API INTEGRATION & DATA FETCHING
+// ==========================================
+
+/**
+ * Fetches initial dashboard summary, account balances, and recent transactions.
+ * Uses Promise.all to fetch endpoints concurrently for speed.
+ */
+async function fetchDashboardData () {
+  isLoading.value = true
+
+  try {
+    // API Call 1: Overview Summary (Total balance, dates, velocity)
+    const summaryPromise = axios.get('/api/v1/dashboard/summary')
+    
+    // API Call 2: User's linked bank/wallet accounts
+    const accountsPromise = axios.get('/api/v1/accounts')
+    
+    // API Call 3: Recent transaction log
+    const transactionsPromise = axios.get('/api/v1/transactions/recent')
+
+    // Execute requests in parallel
+    const [summaryRes, accountsRes, transactionsRes] = await Promise.all([
+      summaryPromise,
+      accountsPromise,
+      transactionsPromise
+    ])
+
+    // Update Summary Reactive Data
+    totalBalance.value = summaryRes.data.totalBalance || 0
+    spendingPercent.value = summaryRes.data.spendingPercent || 0
+    todayLabel.value = summaryRes.data.todayLabel || todayLabel.value
+    currentMonthLabel.value = summaryRes.data.currentMonthLabel || currentMonthLabel.value
+
+    // Update Accounts Data
+    accounts.value = accountsRes.data || []
+
+    // Update Transactions Data
+    transactions.value = transactionsRes.data || []
+
+  } catch (error) {
+    console.error('Failed to load dashboard data:', error)
+    
+    // User alert on request failure
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to sync latest financial data. Please try again.',
+      position: 'top'
+    })
+  } finally {
+    isLoading.value = false
+  }
 }
 
-function formatAmount (value) {
-  return Number(value).toLocaleString('en-IN')
+// Automatically trigger data load on component mount
+onMounted(() => {
+  fetchDashboardData()
+})
+
+// ==========================================
+// NAVIGATION & HELPERS
+// ==========================================
+
+function goToAddExpense () {
+  router.push('/addexpense').catch(err => {
+    console.warn('Path navigation failed, trying named route fallback:', err)
+    router.push({ name: 'addexpense' }).catch(e => {
+      console.error('All routing attempts failed:', e)
+    })
+  })
 }
-</script> -->
-<script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router' // 👈 1. Import Vue Router
 
-defineEmits(['open-settings', 'view-all-accounts', 'add-transaction', 'nav-change'])
+function goToLinkedAccounts () {
+  router.push('/linked-accounts').catch(() => {
+    emit('view-all-accounts')
+  })
+}
 
-const router = useRouter() // 👈 2. Initialize the router instance
-
-const activeNav = ref('home')
-const todayLabel = '15 Shrawan 2083'
-const currentMonthLabel = 'Bhadra'
-const totalBalance = 145000
-const spendingPercent = 40
-
-const accounts = ref([
-  {
-    id: 1,
-    name: 'Nabil Bank Ltd.',
-    masked: '**** 4421',
-    balance: 82450,
-    gradient: 'linear-gradient(135deg, #0f6b46, #0a4a30)'
-  },
-  {
-    id: 2,
-    name: 'eSewa',
-    masked: '9841******',
-    balance: 12000,
-    gradient: 'linear-gradient(135deg, #6cc06a, #4a9e4e)'
-  },
-  {
-    id: 3,
-    name: 'Nepal Investment Bank',
-    masked: '**** 7790',
-    balance: 50000,
-    gradient: 'linear-gradient(135deg, #2f6f8f, #1f4e66)'
-  }
-])
-
-const transactions = ref([
-  {
-    id: 1,
-    name: 'Bhat-Bhateni Supermarket',
-    date: '14 Shrawan 2083',
-    amount: -4250,
-    category: 'Food & Groceries',
-    icon: 'shopping_bag',
-    iconBg: '#e7f3ee',
-    iconColor: 'primary'
-  },
-  {
-    id: 2,
-    name: 'The Bakery Cafe',
-    date: '13 Shrawan 2083',
-    amount: -1200,
-    category: 'Dining',
-    icon: 'restaurant',
-    iconBg: '#fdeee0',
-    iconColor: 'orange-8'
-  },
-  {
-    id: 3,
-    name: 'Salary Deposit',
-    date: '10 Shrawan 2083',
-    amount: 65000,
-    category: 'Income',
-    icon: 'account_balance_wallet',
-    iconBg: '#e7f3ee',
-    iconColor: 'primary'
-  }
-])
-
-const navItems = [
-  { name: 'home', label: 'Home', icon: 'home' },
-  { name: 'goals', label: 'Goals', icon: 'track_changes' },
-  { name: 'imports', label: 'Imports', icon: 'description' },
-  { name: 'profile', label: 'Profile', icon: 'person_outline' }
-]
-
-// 👈 3. Update the navigation handler
 function setActive (name) {
   activeNav.value = name
-  
+
   if (name === 'home') {
     router.push('/dashboard')
   } else if (name === 'goals') {
     router.push('/goals')
-  } else if (name === 'imports') { // 👈 Changed 'imports' to 'import' to match your navItems list
+  } else if (name === 'import' || name === 'imports') {
     router.push('/imports')
   } else if (name === 'profile') {
     router.push('/profile')
   }
 }
 
+/**
+ * Formats numeric values to standard Indian/Nepali numbering format (e.g., 1,45,000)
+ */
 function formatAmount (value) {
+  if (value === null || value === undefined) return '0'
   return Number(value).toLocaleString('en-IN')
 }
 </script>
+
 <style scoped>
 .mk-page {
   --mk-green: #0f6b46;
@@ -541,7 +513,8 @@ function formatAmount (value) {
   bottom: 84px;
   background: linear-gradient(160deg, var(--mk-green), var(--mk-green-dark));
   box-shadow: 0 10px 20px rgba(15, 107, 70, 0.35);
-  z-index: 20;
+  z-index: 99;
+  cursor: pointer;
 }
 
 .mk-bottom-nav {
