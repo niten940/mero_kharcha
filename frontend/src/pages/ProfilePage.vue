@@ -12,8 +12,14 @@
         <q-btn flat round dense icon="settings" color="grey-8" @click="$emit('open-settings')" />
       </div>
 
+      <!-- Loading State -->
+      <div v-if="isLoading" class="text-center q-my-xl">
+        <q-spinner-dots color="primary" size="42px" />
+        <div class="text-caption text-grey-7 q-mt-sm">Loading profile...</div>
+      </div>
+
       <!-- Profile summary -->
-      <div class="mk-profile-summary">
+      <div v-else class="mk-profile-summary">
         <div class="mk-profile-avatar-wrap">
           <q-avatar size="88px" class="mk-profile-avatar">
             <q-icon name="person" size="46px" color="white" />
@@ -23,7 +29,33 @@
             PRO
           </div>
         </div>
-        <div class="mk-profile-name">{{ user.name }}</div>
+
+        <!-- Dynamic User Display / Edit Name Mode -->
+        <div class="q-mt-md">
+          <div v-if="!isEditingName" class="row items-center justify-center">
+            <!-- BACKEND INTEGRATION: Displaying authenticated user's name -->
+            <div class="mk-profile-name">{{ user.name }}</div>
+            <q-btn flat round dense icon="edit" size="sm" color="grey-7" class="q-ml-xs" @click="startEditingName" />
+          </div>
+
+          <!-- Edit Name Input -->
+          <div v-else class="row items-center justify-center q-gutter-x-xs q-mt-sm">
+            <q-input
+              v-model="editedName"
+              dense
+              outlined
+              autofocus
+              maxlength="50"
+              style="max-width: 200px"
+              placeholder="Enter name"
+              @keyup.enter="saveName"
+            />
+            <q-btn round dense icon="check" color="primary" size="sm" :loading="isSaving" @click="saveName" />
+            <q-btn round dense icon="close" color="grey" flat size="sm" :disable="isSaving" @click="cancelEditingName" />
+          </div>
+        </div>
+
+        <!-- BACKEND INTEGRATION: Displaying tier and joining date from API -->
         <div class="mk-profile-meta">{{ user.tier }} &bull; User since {{ user.since }}</div>
       </div>
 
@@ -132,8 +164,18 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import axios from 'axios'
+
+// ==========================================
+// BACKEND INTEGRATION CONFIGURATION
+// ==========================================
+const API_BASE_URL = 'http://localhost:8000/api/v1'
+
+const $q = useQuasar()
+const router = useRouter()
 
 const emit = defineEmits([
   'open-settings',
@@ -144,17 +186,22 @@ const emit = defineEmits([
   'nav-change'
 ])
 
-const router = useRouter()
-
 const activeNav = ref('profile')
 const theme = ref('light')
 const language = ref('en')
 
+// State management for user profile data
+const isLoading = ref(true)
+const isEditingName = ref(false)
+const isSaving = ref(false)
+const editedName = ref('')
+
+// Reactive object holding current user data (fallback values provided)
 const user = ref({
-  name: 'Aryan Sharma',
+  name: 'Guest User',
   tier: 'Free Tier',
   since: '2080 B.S.',
-  isPro: true
+  isPro: false
 })
 
 const navItems = [
@@ -164,7 +211,95 @@ const navItems = [
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
-function setActive (name) {
+// ==========================================
+// BACKEND INTEGRATION FUNCTIONS
+// ==========================================
+
+/**
+ * BACKEND INTEGRATION: Fetch user details logged in during session
+ * Checks localStorage first for locally saved auth state, then fetches from FastAPI.
+ */
+async function fetchUserProfile() {
+  isLoading.value = true
+  try {
+    // Check if name exists in localStorage (saved during login)
+    const localName = localStorage.getItem('user_name')
+    const token = localStorage.getItem('auth_token')
+
+    const response = await axios.get(`${API_BASE_URL}/profile`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+
+    if (response.data) {
+      user.value = {
+        name: localName || response.data.name || 'User',
+        tier: response.data.tier || 'Free Tier',
+        since: response.data.since || '2080 B.S.',
+        isPro: response.data.isPro ?? true
+      }
+    }
+  } catch (error) {
+    console.warn('Backend connection failed, falling back to local storage:', error)
+    
+    // Fallback if backend API is not running: use stored login name
+    const storedName = localStorage.getItem('user_name')
+    if (storedName) {
+      user.value.name = storedName
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+/**
+ * BACKEND INTEGRATION: Updates user's name on the server and local state
+ */
+async function saveName() {
+  if (!editedName.value.trim()) return
+
+  isSaving.value = true
+  try {
+    const token = localStorage.getItem('auth_token')
+    
+    // BACKEND INTEGRATION: Send updated name to FastAPI endpoint
+    await axios.patch(
+      `${API_BASE_URL}/profile`,
+      { name: editedName.value.trim() },
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    )
+
+    // Sync state locally
+    user.value.name = editedName.value.trim()
+    localStorage.setItem('user_name', user.value.name)
+
+    isEditingName.value = false
+    $q.notify({ type: 'positive', message: 'Name updated successfully!' })
+  } catch (error) {
+    console.error('Failed to update user name:', error)
+    // Update locally even if backend API fails during demo
+    user.value.name = editedName.value.trim()
+    localStorage.setItem('user_name', user.value.name)
+    isEditingName.value = false
+  } finally {
+    isSaving.value = false
+  }
+}
+
+function startEditingName() {
+  editedName.value = user.value.name
+  isEditingName.value = true
+}
+
+function cancelEditingName() {
+  isEditingName.value = false
+}
+
+// BACKEND INTEGRATION: Load profile data on component mount
+onMounted(() => {
+  fetchUserProfile()
+})
+
+function setActive(name) {
   activeNav.value = name
   emit('nav-change', name)
 
@@ -251,13 +386,12 @@ function setActive (name) {
   font-size: 19px;
   font-weight: 800;
   color: var(--mk-text);
-  margin-top: 14px;
 }
 
 .mk-profile-meta {
   font-size: 13px;
   color: var(--mk-muted);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .mk-section-title {

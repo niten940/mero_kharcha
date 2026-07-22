@@ -22,7 +22,7 @@
               v-model="fullName"
               dense
               outlined
-              placeholder="Aayush Shrestha"
+              placeholder="...Your full name"
               class="mk-input"
               :rules="[val => !!val || 'Full name is required']"
               lazy-rules
@@ -41,7 +41,7 @@
               dense
               outlined
               type="email"
-              placeholder="name@example.com"
+              placeholder="gmail.com"
               class="mk-input"
               :rules="[
                 val => !!val || 'Email is required',
@@ -64,7 +64,7 @@
                 dense
                 outlined
                 type="tel"
-                placeholder="98XXXXXXXX"
+                placeholder="10 digit number"
                 class="mk-input"
                 :rules="[
                   val => !!val || 'Phone number is required',
@@ -125,7 +125,7 @@
                 type="number"
                 dense
                 outlined
-                placeholder="Ex: 25"
+                placeholder="Your age"
                 class="mk-input"
                 :rules="[
                   val => !!val || 'Required',
@@ -363,7 +363,6 @@ const isValid = computed(() => {
     email.value.trim() !== '' &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value) &&
     /^\+?[0-9]{7,15}$/.test(phone.value) &&
-    !!nationality.value &&
     age.value > 0 &&
     !!gender.value &&
     password.value.length >= 8 &&

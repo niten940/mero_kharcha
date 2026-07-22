@@ -8,22 +8,23 @@ import termsView from '../pages/TermsPage.vue'
 import policy from '../pages/PrivacyPage.vue'
 import dashboard from '../pages/DashBoardPage.vue' 
 import goals from '../pages/Goalspage.vue'
-import imports from '../pages/Imports.vue'// Import your terms and conditions page
-import profile from '../pages/ProfilePage.vue' // Import your profile page
+import imports from '../pages/Imports.vue'
+import profile from '../pages/ProfilePage.vue'
+import AddExpensePage from '../pages/AddExpensePage.vue'
+import LinkedAccountsView from '../pages/LinkedAccountsPage.vue' // 👈 Fixed missing import!
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-   
+    {
+      path: '/',
+      name: 'signup',
+      component: SignupView
+    },
     {
       path: '/login',
       name: 'login',
       component: LoginPageView
-    },
-     {
-      path: '/',
-      name: 'signup',
-      component: SignupView // This makes your form the default home page!
     },
     {
       path: '/reset-password',
@@ -33,32 +34,47 @@ const router = createRouter({
     {
       path: '/terms',
       name: 'terms',
-      component: termsView // This is a placeholder for your terms and conditions page
+      component: termsView
     },
-      {
-        path: '/privacy',
-        name: 'privacy',
-        component: policy // This is a placeholder for your privacy policy page
+    {
+      path: '/privacy',
+      name: 'privacy',
+      component: policy
     },
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: dashboard // This is a placeholder for your dashboard page
+      component: dashboard
     },
     {
       path: '/goals',
       name: 'goals',
-      component: goals // This is a placeholder for your goals page
+      component: goals
     },
     {
       path: '/imports',
       name: 'imports',
-      component: imports // This is a placeholder for your imports page
+      component: imports
     },
     {
       path: '/profile',
       name: 'profile',
-      component: profile // This is a placeholder for your profile page
+      component: profile
+    },
+    {
+      path: '/addexpense',
+      name: 'addexpense',
+      component: AddExpensePage
+    },
+    {
+      path: '/linked-accounts',
+      name: 'linked-accounts',
+      component: LinkedAccountsView
+    },
+    // Catch-all fallback to Dashboard if unknown path is entered
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/dashboard'
     }
   ]
 })
