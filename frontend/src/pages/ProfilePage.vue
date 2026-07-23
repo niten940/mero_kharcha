@@ -33,7 +33,6 @@
         <!-- Dynamic User Display / Edit Name Mode -->
         <div class="q-mt-md">
           <div v-if="!isEditingName" class="row items-center justify-center">
-            <!-- BACKEND INTEGRATION: Displaying authenticated user's name -->
             <div class="mk-profile-name">{{ user.name }}</div>
             <q-btn flat round dense icon="edit" size="sm" color="grey-7" class="q-ml-xs" @click="startEditingName" />
           </div>
@@ -55,7 +54,6 @@
           </div>
         </div>
 
-        <!-- BACKEND INTEGRATION: Displaying tier and joining date from API -->
         <div class="mk-profile-meta">{{ user.tier }} &bull; User since {{ user.since }}</div>
       </div>
 
@@ -135,6 +133,19 @@
         </div>
       </div>
 
+      <!-- Logout Button -->
+      <div class="q-mb-md">
+        <q-btn
+          outline
+          color="negative"
+          class="full-width mk-logout-btn"
+          icon="logout"
+          label="Log Out"
+          no-caps
+          @click.stop="goTologin"
+        />
+      </div>
+
       <!-- App brand footer -->
       <div class="mk-brand-footer">
         <div class="mk-brand-icon">
@@ -169,9 +180,6 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import axios from 'axios'
 
-// ==========================================
-// BACKEND INTEGRATION CONFIGURATION
-// ==========================================
 const API_BASE_URL = 'http://localhost:8000/api/v1'
 
 const $q = useQuasar()
@@ -190,13 +198,11 @@ const activeNav = ref('profile')
 const theme = ref('light')
 const language = ref('en')
 
-// State management for user profile data
 const isLoading = ref(true)
 const isEditingName = ref(false)
 const isSaving = ref(false)
 const editedName = ref('')
 
-// Reactive object holding current user data (fallback values provided)
 const user = ref({
   name: 'Guest User',
   tier: 'Free Tier',
@@ -211,18 +217,23 @@ const navItems = [
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
-// ==========================================
-// BACKEND INTEGRATION FUNCTIONS
-// ==========================================
+function goTologin() {
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('user_name')
 
-/**
- * BACKEND INTEGRATION: Fetch user details logged in during session
- * Checks localStorage first for locally saved auth state, then fetches from FastAPI.
- */
+  // Safely attempt Vue Router navigation, fallback to direct browser load
+  if (router) {
+    router.push('/login').catch(() => {
+      window.location.href = '/login'
+    })
+  } else {
+    window.location.href = '/login'
+  }
+}
+
 async function fetchUserProfile() {
   isLoading.value = true
   try {
-    // Check if name exists in localStorage (saved during login)
     const localName = localStorage.getItem('user_name')
     const token = localStorage.getItem('auth_token')
 
@@ -240,8 +251,6 @@ async function fetchUserProfile() {
     }
   } catch (error) {
     console.warn('Backend connection failed, falling back to local storage:', error)
-    
-    // Fallback if backend API is not running: use stored login name
     const storedName = localStorage.getItem('user_name')
     if (storedName) {
       user.value.name = storedName
@@ -251,9 +260,6 @@ async function fetchUserProfile() {
   }
 }
 
-/**
- * BACKEND INTEGRATION: Updates user's name on the server and local state
- */
 async function saveName() {
   if (!editedName.value.trim()) return
 
@@ -261,22 +267,21 @@ async function saveName() {
   try {
     const token = localStorage.getItem('auth_token')
     
-    // BACKEND INTEGRATION: Send updated name to FastAPI endpoint
     await axios.patch(
       `${API_BASE_URL}/profile`,
       { name: editedName.value.trim() },
       { headers: token ? { Authorization: `Bearer ${token}` } : {} }
     )
 
-    // Sync state locally
     user.value.name = editedName.value.trim()
     localStorage.setItem('user_name', user.value.name)
 
     isEditingName.value = false
-    $q.notify({ type: 'positive', message: 'Name updated successfully!' })
+    if ($q && $q.notify) {
+      $q.notify({ type: 'positive', message: 'Name updated successfully!' })
+    }
   } catch (error) {
     console.error('Failed to update user name:', error)
-    // Update locally even if backend API fails during demo
     user.value.name = editedName.value.trim()
     localStorage.setItem('user_name', user.value.name)
     isEditingName.value = false
@@ -294,7 +299,6 @@ function cancelEditingName() {
   isEditingName.value = false
 }
 
-// BACKEND INTEGRATION: Load profile data on component mount
 onMounted(() => {
   fetchUserProfile()
 })
@@ -303,14 +307,11 @@ function setActive(name) {
   activeNav.value = name
   emit('nav-change', name)
 
-  if (name === 'home') {
-    router.push('/dashboard')
-  } else if (name === 'goals') {
-    router.push('/goals')
-  } else if (name === 'imports') {
-    router.push('/imports')
-  } else if (name === 'profile') {
-    router.push('/profile')
+  if (router) {
+    if (name === 'home') router.push('/dashboard')
+    else if (name === 'goals') router.push('/goals')
+    else if (name === 'imports') router.push('/imports')
+    else if (name === 'profile') router.push('/profile')
   }
 }
 </script>
@@ -441,7 +442,7 @@ function setActive(name) {
   border-radius: 14px;
   padding: 14px;
   box-shadow: 0 6px 16px rgba(20, 30, 25, 0.04);
-  margin-bottom: 22px;
+  margin-bottom: 16px;
 }
 
 .mk-settings-label {
@@ -453,6 +454,12 @@ function setActive(name) {
 .mk-toggle {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
+}
+
+.mk-logout-btn {
+  border-radius: 12px;
+  font-weight: 700;
+  background: #ffffff;
 }
 
 .mk-brand-footer {

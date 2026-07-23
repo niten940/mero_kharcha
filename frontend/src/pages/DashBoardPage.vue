@@ -9,10 +9,10 @@
           </q-avatar>
           <div class="mk-brand-name">Mero Kharcha</div>
         </div>
-        <q-btn flat round dense icon="settings" color="grey-8" @click="emit('open-settings')" />
+        <q-btn flat round dense icon="settings" color="grey-8" @click="handleOpenSettings" />
       </div>
 
-      <!-- Loading Spinner for Dashboard Data -->
+      <!-- Loading Spinner -->
       <div v-if="isLoading" class="text-center q-my-xl">
         <q-spinner-dots color="primary" size="40px" />
         <div class="text-caption text-grey-7 q-mt-sm">Syncing your expenses...</div>
@@ -72,7 +72,7 @@
               <div class="mk-account-name">{{ account.name }}</div>
               <q-icon name="account_balance" size="26px" class="mk-account-icon" />
             </div>
-            <div class="mk-account-number">{{ account.masked }}</div>
+            <div class="mk-account-number">{{ account.masked || '•••• ' + (account.id || '0000') }}</div>
             <div class="mk-account-bottom">
               <div class="mk-account-label">BALANCE</div>
               <div class="mk-account-balance">Rs. {{ formatAmount(account.balance) }}</div>
@@ -115,7 +115,7 @@
       </template>
     </div>
 
-    <!-- Floating action button -->
+    <!-- Floating Action Button -->
     <q-btn
       round
       unelevated
@@ -125,7 +125,7 @@
       @click.stop="goToAddExpense"
     />
 
-    <!-- Bottom navigation -->
+    <!-- Bottom Navigation -->
     <div class="mk-bottom-nav">
       <div
         v-for="item in navItems"
@@ -147,19 +147,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-// Replace with your preferred HTTP client (e.g. axios instance configured with base URL & auth headers)
-import axios from 'axios' 
+import axios from 'axios'
 
-// Initialize Quasar utilities for notifications/dialogs
 const $q = useQuasar()
 const router = useRouter()
 
-// Emits declaration
 const emit = defineEmits(['open-settings', 'view-all-accounts', 'add-transaction', 'nav-change'])
 
-// ==========================================
-// REACTIVE STATE (Backend Data Containers)
-// ==========================================
 const isLoading = ref(true)
 const activeNav = ref('home')
 
@@ -171,7 +165,6 @@ const spendingPercent = ref(0)
 const accounts = ref([])
 const transactions = ref([])
 
-// Static navigation configuration
 const navItems = [
   { name: 'home', label: 'Home', icon: 'home' },
   { name: 'goals', label: 'Goals', icon: 'track_changes' },
@@ -179,104 +172,86 @@ const navItems = [
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
-// ==========================================
-// API INTEGRATION & DATA FETCHING
-// ==========================================
+function handleOpenSettings() {
+  emit('open-settings')
+}
 
-/**
- * Fetches initial dashboard summary, account balances, and recent transactions.
- * Uses Promise.all to fetch endpoints concurrently for speed.
- */
-async function fetchDashboardData () {
+async function fetchDashboardData() {
   isLoading.value = true
 
   try {
-    // API Call 1: Overview Summary (Total balance, dates, velocity)
     const summaryPromise = axios.get('/api/v1/dashboard/summary')
-    
-    // API Call 2: User's linked bank/wallet accounts
     const accountsPromise = axios.get('/api/v1/accounts')
-    
-    // API Call 3: Recent transaction log
     const transactionsPromise = axios.get('/api/v1/transactions/recent')
 
-    // Execute requests in parallel
     const [summaryRes, accountsRes, transactionsRes] = await Promise.all([
       summaryPromise,
       accountsPromise,
       transactionsPromise
     ])
 
-    // Update Summary Reactive Data
-    totalBalance.value = summaryRes.data.totalBalance || 0
-    spendingPercent.value = summaryRes.data.spendingPercent || 0
-    todayLabel.value = summaryRes.data.todayLabel || todayLabel.value
-    currentMonthLabel.value = summaryRes.data.currentMonthLabel || currentMonthLabel.value
+    totalBalance.value = summaryRes.data?.totalBalance ?? 0
+    spendingPercent.value = summaryRes.data?.spendingPercent ?? 0
+    todayLabel.value = summaryRes.data?.todayLabel || todayLabel.value
+    currentMonthLabel.value = summaryRes.data?.currentMonthLabel || currentMonthLabel.value
 
-    // Update Accounts Data
-    accounts.value = accountsRes.data || []
+    accounts.value = Array.isArray(accountsRes.data) ? accountsRes.data : []
 
-    // Update Transactions Data
-    transactions.value = transactionsRes.data || []
+    const rawTx = Array.isArray(transactionsRes.data) ? transactionsRes.data : []
+    transactions.value = rawTx.map(tx => ({
+      id: tx.id || tx._id || Math.random(),
+      name: tx.name || tx.title || tx.description || 'Transaction',
+      date: tx.date || tx.created_at || 'Today',
+      category: tx.category || 'General',
+      amount: Number(tx.amount ?? tx.price ?? tx.total) || 0,
+      icon: tx.icon || (Number(tx.amount || 0) < 0 ? 'shopping_bag' : 'account_balance_wallet'),
+      iconBg: tx.iconBg || (Number(tx.amount || 0) < 0 ? '#fee2e2' : '#e7f3ee'),
+      iconColor: tx.iconColor || (Number(tx.amount || 0) < 0 ? 'negative' : 'primary')
+    }))
 
   } catch (error) {
-    console.error('Failed to load dashboard data:', error)
-    
-    // User alert on request failure
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to sync latest financial data. Please try again.',
-      position: 'top'
-    })
+    console.warn('Backend API connection failed, showing default state:', error)
   } finally {
     isLoading.value = false
   }
 }
 
-// Automatically trigger data load on component mount
 onMounted(() => {
   fetchDashboardData()
 })
 
-// ==========================================
-// NAVIGATION & HELPERS
-// ==========================================
-
-function goToAddExpense () {
-  router.push('/addexpense').catch(err => {
-    console.warn('Path navigation failed, trying named route fallback:', err)
-    router.push({ name: 'addexpense' }).catch(e => {
-      console.error('All routing attempts failed:', e)
+function goToAddExpense() {
+  if (router) {
+    router.push('/addexpense').catch(() => {
+      router.push({ name: 'addexpense' }).catch(() => {})
     })
-  })
-}
-
-function goToLinkedAccounts () {
-  router.push('/linked-accounts').catch(() => {
-    emit('view-all-accounts')
-  })
-}
-
-function setActive (name) {
-  activeNav.value = name
-
-  if (name === 'home') {
-    router.push('/dashboard')
-  } else if (name === 'goals') {
-    router.push('/goals')
-  } else if (name === 'import' || name === 'imports') {
-    router.push('/imports')
-  } else if (name === 'profile') {
-    router.push('/profile')
   }
 }
 
-/**
- * Formats numeric values to standard Indian/Nepali numbering format (e.g., 1,45,000)
- */
-function formatAmount (value) {
-  if (value === null || value === undefined) return '0'
-  return Number(value).toLocaleString('en-IN')
+function goToLinkedAccounts() {
+  if (router) {
+    router.push('/linked-accounts').catch(() => {
+      emit('view-all-accounts')
+    })
+  } else {
+    emit('view-all-accounts')
+  }
+}
+
+function setActive(name) {
+  activeNav.value = name
+
+  if (!router) return
+  if (name === 'home') router.push('/dashboard')
+  else if (name === 'goals') router.push('/goals')
+  else if (name === 'import' || name === 'imports') router.push('/imports')
+  else if (name === 'profile') router.push('/profile')
+}
+
+function formatAmount(value) {
+  const num = Number(value)
+  if (isNaN(num)) return '0'
+  return num.toLocaleString('en-IN')
 }
 </script>
 
