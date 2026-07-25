@@ -11,7 +11,8 @@ import goals from '../pages/Goalspage.vue'
 import imports from '../pages/Imports.vue'
 import profile from '../pages/ProfilePage.vue'
 import AddExpensePage from '../pages/AddExpensePage.vue'
-import LinkedAccountsView from '../pages/LinkedAccountsPage.vue' // 👈 Fixed missing import!
+import LinkedAccountsView from '../pages/LinkedAccountsPage.vue'
+import AddDream from '../pages/AddDreamPage.vue' // Fixed path!
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -70,6 +71,11 @@ const router = createRouter({
       path: '/linked-accounts',
       name: 'linked-accounts',
       component: LinkedAccountsView
+    },
+    {
+      path: '/add-dream',
+      name: 'add-dream',
+      component: AddDream
     },
     // Catch-all fallback to Dashboard if unknown path is entered
     {
