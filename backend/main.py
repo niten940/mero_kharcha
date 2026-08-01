@@ -1,9 +1,11 @@
 import uvicorn
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from routers import expenses, incomes, budget,goals, import_statement, recurring, reports
+from routers import (expenses, incomes, reports, goals, recurring, budget, import_statement, goal_deposit, behavior, opportunity_cost, calendar_bs, admin, ocr_receipt,)
 from JWT_Authentication import auth
 from fastapi.middleware.cors import CORSMiddleware
+from rate_limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 app = FastAPI(
     title="Mero Kharcha",
@@ -11,7 +13,14 @@ app = FastAPI(
     description="Personal expense tracking system. Manage expenses, incomes, budgets, and category-wise reports. Built with FastAPI and PostgreSQL.",
 )
 
-# --- Enable CORS Middleware ---
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+origin = [
+    "http://localhost:3000",  # FastAPI hosting address
+    "http://localhost:5173",  # default Vue.js hosting address
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows requests from your Vue dev server (e.g. http://localhost:5174)
@@ -29,6 +38,13 @@ app.include_router(import_statement.router_imports, prefix="/imports", tags=["Im
 app.include_router(recurring.router_recurring, prefix="/recurring", tags=["Recurring"])
 app.include_router(budget.router_budget, prefix="/budget", tags=["Budget"])
 app.include_router(reports.router_reports, prefix="/reports", tags=["Reports"])
+app.include_router(goal_deposit.router_goal_deposit, prefix="/goal_deposit", tags=["Goal Deposit"])
+app.include_router(behavior.router_behavior, prefix="/behavior", tags=["Behavior Analysis"])
+app.include_router(opportunity_cost.router_opportunity_cost, prefix="/opportunity-cost", tags=["Opportunity Cost"],)
+app.include_router(calendar_bs.router_calendar_bs, prefix="/calendar", tags=["Bikram Sambat Calendar"])
+app.include_router(admin.router_admin, prefix="/admin", tags=["Admin"])
+app.include_router(ocr_receipt.router_ocr, prefix="/ocr", tags=["OCR Receipt Scanning"])
+
 
 @app.get("/")
 def read_root():

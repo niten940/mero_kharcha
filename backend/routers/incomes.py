@@ -9,7 +9,7 @@ from database import get_db
 from sqlalchemy.orm.session import Session
 from fastapi import APIRouter, Depends
 from JWT_Authentication.auth import get_current_user
-from sqlAlchemy.income_model import Income
+from sql_Alchemy_db_model.income_model import Income
 
 router_income = APIRouter()
 
