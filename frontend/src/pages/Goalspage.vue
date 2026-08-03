@@ -1,9 +1,9 @@
 <template>
   <q-page class="mk-page">
     <div class="mk-shell">
-      <!-- Header (Clicking the brand now redirects Home!) -->
+      <!-- Header -->
       <div class="mk-header row items-center justify-between">
-        <div class="row items-center mk-brand-row cursor-pointer" @click="goHome">
+        <div class="row items-center mk-brand-row">
           <q-avatar size="36px" class="mk-avatar">
             <q-icon name="person" size="20px" color="white" />
           </q-avatar>
@@ -77,7 +77,7 @@
         flat
         no-caps
         class="mk-add-dream"
-        @click="$emit('add-goal')"
+        @click="goToAddDream"
       >
         <q-icon name="add_circle_outline" size="20px" class="q-mr-sm" />
         Add New Dream
@@ -95,13 +95,12 @@
         </div>
       </div>
 
-      <!-- Footer (Now with active Router Links) -->
       <div class="mk-footer">
         <div class="mk-footer-brand">by Bug Creator &bull; 2083 B.S.</div>
         <div class="mk-footer-links">
-          <router-link to="/privacy" class="mk-link-muted">Privacy Policy</router-link>
+          <span class="mk-link-muted">Privacy Policy</span>
           <span class="mk-dot">&bull;</span>
-          <router-link to="/terms" class="mk-link-muted">Terms of Service</router-link>
+          <span class="mk-link-muted">Terms of Service</span>
         </div>
       </div>
     </div>
@@ -113,7 +112,7 @@
       icon="add"
       color="primary"
       class="mk-fab"
-      @click="$emit('add-goal')"
+      @click="goToAddDream"
     />
 
     <!-- Bottom navigation -->
@@ -136,11 +135,16 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router' // 👈 1. Import Vue Router
+import { useRouter } from 'vue-router'
 
-defineEmits(['open-settings', 'add-goal', 'nav-change'])
+defineEmits(['open-settings', 'nav-change'])
 
-const router = useRouter() // 👈 2. Initialize the router instance
+const router = useRouter()
+
+// Navigate to the Add Dream screen (was: emit('add-goal')).
+function goToAddDream () {
+  router.push({ name: 'add-dream' })
+}
 
 const activeNav = ref('goals')
 const yearLabel = '2083 B.S.'
@@ -190,23 +194,8 @@ const navItems = [
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
-// 👈 3. Updated navigation method
 function setActive (name) {
   activeNav.value = name
-  if (name === 'home') {
-    router.push('/dashboard')
-  } else if (name === 'goals') {
-    router.push('/goals')
-  } else if (name === 'import') {
-    router.push('/import')
-  } else if (name === 'profile') {
-    router.push('/profile')
-  }
-}
-
-// 👈 4. Helper function to go straight back to Dashboard/Home
-function goHome () {
-  router.push('/dashboard')
 }
 
 function formatAmount (value) {
@@ -215,11 +204,6 @@ function formatAmount (value) {
 </script>
 
 <style scoped>
-/* Utility class for cursor styling */
-.cursor-pointer {
-  cursor: pointer;
-}
-
 .mk-page {
   --mk-green: #0f6b46;
   --mk-green-dark: #0b5637;
@@ -454,10 +438,6 @@ function formatAmount (value) {
   color: #9ca3af;
   font-size: 11px;
   cursor: pointer;
-  text-decoration: none;
-}
-.mk-link-muted:hover {
-  color: var(--mk-text);
 }
 
 .mk-dot {
