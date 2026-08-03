@@ -1,6 +1,13 @@
-pip install "bcrypt==4.0.1" --break-system-packages
-pip install python-jose --break-system-packages
+pip install "bcrypt==4.0.1" 
+pip install python-jose
 pip install python-multipart
 pip install "psycopg[binary]"
-pip install google-auth --break-system-packages
+pip install google-auth
 pip install pandas openpyxl pdfplumber
+pip install requests
+pip install python-dateutil
+pip install nepali-datetime
+pip install slowapi 
+pip install better-profanity 
+pip install pytesseract pillow
+pip install pydantic[email]
