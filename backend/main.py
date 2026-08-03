@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from rate_limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from JWT_Authentication import register, login, forgot_password, token_refresh
+
 
 app = FastAPI(
     title="Mero Kharcha",
@@ -29,7 +31,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router_login, prefix="/auth", tags=["Auth"])
+
+#authentication routes
+app.include_router(register.router_register, prefix="/auth", tags=["Register"])
+app.include_router(login.router_auth_login, prefix="/auth", tags=["Login"])
+app.include_router(forgot_password.router_password, prefix="/auth", tags=["Password Reset"])
+app.include_router(token_refresh.router_token, prefix="/auth", tags=["Token Refresh"])
+
+#Functionality routes
 app.include_router(expenses.router_expense, prefix="/expenses", tags=["Expenses"])
 app.include_router(incomes.router_income, prefix="/incomes", tags=["Incomes"])
 app.include_router(goals.router_goals, prefix="/goals", tags=["Goals"])
@@ -41,9 +50,10 @@ app.include_router(goal_deposit.router_goal_deposit, prefix="/goal_deposit", tag
 app.include_router(behavior.router_behavior, prefix="/behavior", tags=["Behavior Analysis"])
 app.include_router(opportunity_cost.router_opportunity_cost, prefix="/opportunity-cost", tags=["Opportunity Cost"],)
 app.include_router(calendar_bs.router_calendar_bs, prefix="/calendar", tags=["Bikram Sambat Calendar"])
-app.include_router(admin.router_admin, prefix="/admin", tags=["Admin"])
-app.include_router(ocr_receipt.router_ocr, prefix="/ocr", tags=["OCR Receipt Scanning"])
 
+#Additional Functionality routes
+app.include_router(ocr_receipt.router_ocr, prefix="/ocr", tags=["OCR Receipt Scanning"])
+app.include_router(admin.router_admin, prefix="/admin", tags=["Admin"])
 
 @app.get("/")
 def read_root():
