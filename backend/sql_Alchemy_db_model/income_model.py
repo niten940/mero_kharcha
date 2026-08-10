@@ -1,5 +1,5 @@
-from sqlAlchemy.base import Base
-from sqlAlchemy.user_models import Users
+from sql_Alchemy_db_model.base import Base
+from sql_Alchemy_db_model.user_models import Users
 from sqlalchemy import *
 
 

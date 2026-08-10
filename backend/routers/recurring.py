@@ -4,7 +4,14 @@ from pydantic import BaseModel
 from database import get_db
 from sqlalchemy.orm.session import Session
 from JWT_Authentication.auth import get_current_user
-from sqlAlchemy.recurring_model import RecurringTransaction, TransactionType, Frequency
+from sql_Alchemy_db_model.recurring_model import (
+    RecurringTransaction,
+    TransactionType,
+    Frequency,
+)
+from dateutil.relativedelta import relativedelta
+from sql_Alchemy_db_model.expense_models import Expenses
+from sql_Alchemy_db_model.income_model import Income
 
 router_recurring = APIRouter()
 
@@ -18,7 +25,108 @@ class RecurringInput(BaseModel):
     frequency: Frequency
     next_due_date: date
     is_active: bool = True  # Added so users can toggle active status via PUT
-    
+
+
+def _advance_due_date(current_due: date, frequency: Frequency) -> date:
+    """
+    Calculate the next due date after firing, based on the recurrence frequency.
+
+    Args:
+        current_due (date): The due date that was just fired.
+        frequency (Frequency): The recurrence frequency enum value.
+
+    Returns:
+        date: The next due date.
+    """
+    if frequency == Frequency.daily:
+        return current_due + relativedelta(days=1)
+    elif frequency == Frequency.weekly:
+        return current_due + relativedelta(weeks=1)
+    elif frequency == Frequency.monthly:
+        return current_due + relativedelta(months=1)
+    elif frequency == Frequency.yearly:
+        return current_due + relativedelta(years=1)
+    return current_due
+
+
+@router_recurring.post(
+    "/fire-due",
+    summary="Fire all due recurring transactions",
+    description="Finds active recurring transactions with next_due_date <= today for the authenticated user, creates the corresponding Expense/Income row for each, and advances next_due_date by the template's frequency.",
+)
+def fire_due_recurring_transactions(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Fire all due recurring transaction templates for the authenticated user.
+
+    Args:
+        current_user (dict): The current authenticated user payload containing the user_id.
+        db (Session): The active SQLAlchemy database session dependency.
+
+    Returns:
+        dict: Counts of expenses and income rows created, plus the list of fired template IDs.
+    """
+    user_id = current_user["user_id"]
+    today = date.today()
+
+    due_templates = (
+        db.query(RecurringTransaction)
+        .filter(
+            RecurringTransaction.user_id == user_id,
+            RecurringTransaction.is_active == True,
+            RecurringTransaction.next_due_date <= today,
+        )
+        .all()
+    )
+
+    expense_count = income_count = 0
+    fired_ids = []
+
+    for template in due_templates:
+        # A template may be overdue by more than one cycle (e.g. app unused for 2 months),
+        # so fire it repeatedly until next_due_date is in the future.
+        while template.next_due_date <= today:
+            if template.type == TransactionType.expense:
+                db.add(
+                    Expenses(
+                        user_id=user_id,
+                        title=template.title,
+                        amount=template.amount,
+                        category=template.category,
+                        description=template.description,
+                        date=template.next_due_date,
+                    )
+                )
+                expense_count += 1
+            else:
+                db.add(
+                    Income(
+                        user_id=user_id,
+                        title=template.title,
+                        amount=template.amount,
+                        received_from=template.category,
+                        description=template.description,
+                        date=template.next_due_date,
+                    )
+                )
+                income_count += 1
+
+            template.next_due_date = _advance_due_date(
+                template.next_due_date, template.frequency
+            )
+
+        fired_ids.append(template.id)
+
+    db.commit()
+    return {
+        "message": "Recurring transactions processed",
+        "expenses_created": expense_count,
+        "income_created": income_count,
+        "templates_fired": fired_ids,
+    }
+
 
 @router_recurring.get(
     "/{recurring_id}",

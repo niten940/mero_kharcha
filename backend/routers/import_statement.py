@@ -1,6 +1,7 @@
 """
 Imports router — parses CSV/XLSX/PDF statements and ingests confirmed rows into Expenses/Income.
 """
+
 import io
 from datetime import date
 import pandas as pd
@@ -10,12 +11,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
 from JWT_Authentication.auth import get_current_user
-from sqlAlchemy.expense_models import Expenses
-from sqlAlchemy.income_model import Income
+from sql_Alchemy_db_model.expense_models import Expenses
+from sql_Alchemy_db_model.income_model import Income
 
 router_imports = APIRouter()
 
 REQUIRED_COLUMNS = {"date", "title", "category", "description", "amount"}
+
 
 class ParsedTransaction(BaseModel):
     date: date
@@ -23,6 +25,7 @@ class ParsedTransaction(BaseModel):
     category: str
     description: str
     amount: float
+
 
 class ConfirmIngestionInput(BaseModel):
     transactions: list[ParsedTransaction]
@@ -81,7 +84,10 @@ def _parse_pdf(file_bytes: bytes) -> pd.DataFrame:
                 rows.extend(table[1:])
 
     if header is None:
-        raise HTTPException(status_code=422, detail="Could not extract a table from this PDF. Try CSV or XLSX instead.")
+        raise HTTPException(
+            status_code=422,
+            detail="Could not extract a table from this PDF. Try CSV or XLSX instead.",
+        )
 
     return pd.DataFrame(rows, columns=header)
 
@@ -102,26 +108,38 @@ def _normalize(df: pd.DataFrame) -> list[dict]:
     df.columns = [str(c).strip().lower() for c in df.columns]
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
-        raise HTTPException(status_code=422, detail=f"Missing required columns: {', '.join(missing)}")
+        raise HTTPException(
+            status_code=422, detail=f"Missing required columns: {', '.join(missing)}"
+        )
 
     transactions = []
     for _, row in df.iterrows():
         try:
-            transactions.append({
-                "date": pd.to_datetime(row["date"]).date(),
-                "title": str(row["title"]),
-                "category": str(row["category"]),
-                "description": str(row.get("description") or ""),
-                "amount": round(float(row["amount"]), 2),
-            })
+            transactions.append(
+                {
+                    "date": pd.to_datetime(row["date"]).date(),
+                    "title": str(row["title"]),
+                    "category": str(row["category"]),
+                    "description": str(row.get("description") or ""),
+                    "amount": round(float(row["amount"]), 2),
+                }
+            )
         except (ValueError, TypeError):
-            raise HTTPException(status_code=422, detail=f"Could not parse row: {row.to_dict()}")
+            raise HTTPException(
+                status_code=422, detail=f"Could not parse row: {row.to_dict()}"
+            )
 
     return transactions
 
 
-@router_imports.post("/parse", summary="Parse an uploaded statement", description="Accepts a CSV, XLSX, or PDF file and returns a preview of parsed transactions without saving them.")
-async def parse_statement(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+@router_imports.post(
+    "/parse",
+    summary="Parse an uploaded statement",
+    description="Accepts a CSV, XLSX, or PDF file and returns a preview of parsed transactions without saving them.",
+)
+async def parse_statement(
+    file: UploadFile = File(...), current_user: dict = Depends(get_current_user)
+):
     """
     Parse an uploaded statement file into a transaction preview.
 
@@ -145,13 +163,24 @@ async def parse_statement(file: UploadFile = File(...), current_user: dict = Dep
     elif filename.endswith(".pdf"):
         df = _parse_pdf(file_bytes)
     else:
-        raise HTTPException(status_code=400, detail="Unsupported file type. Use CSV, XLSX, or PDF.")
+        raise HTTPException(
+            status_code=400, detail="Unsupported file type. Use CSV, XLSX, or PDF."
+        )
 
     return _normalize(df)
 
 
-@router_imports.post("/confirm", status_code=201, summary="Confirm ingestion of parsed transactions", description="Saves confirmed transactions into Expenses (negative amount) or Income (positive amount).")
-def confirm_ingestion(payload: ConfirmIngestionInput, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+@router_imports.post(
+    "/confirm",
+    status_code=201,
+    summary="Confirm ingestion of parsed transactions",
+    description="Saves confirmed transactions into Expenses (negative amount) or Income (positive amount).",
+)
+def confirm_ingestion(
+    payload: ConfirmIngestionInput,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Save confirmed parsed transactions into Expenses or Income based on amount sign.
 
@@ -168,13 +197,33 @@ def confirm_ingestion(payload: ConfirmIngestionInput, current_user: dict = Depen
 
     for tx in payload.transactions:
         if tx.amount < 0:
-            db.add(Expenses(user_id=user_id, title=tx.title, category=tx.category,
-                             description=tx.description, date=tx.date, amount=abs(tx.amount)))
+            db.add(
+                Expenses(
+                    user_id=user_id,
+                    title=tx.title,
+                    category=tx.category,
+                    description=tx.description,
+                    date=tx.date,
+                    amount=abs(tx.amount),
+                )
+            )
             expense_count += 1
         else:
-            db.add(Income(user_id=user_id, title=tx.title, received_from=tx.category,
-                           description=tx.description, date=tx.date, amount=tx.amount))
+            db.add(
+                Income(
+                    user_id=user_id,
+                    title=tx.title,
+                    received_from=tx.category,
+                    description=tx.description,
+                    date=tx.date,
+                    amount=tx.amount,
+                )
+            )
             income_count += 1
 
     db.commit()
-    return {"message": "Ingestion complete", "expenses_created": expense_count, "income_created": income_count}
+    return {
+        "message": "Ingestion complete",
+        "expenses_created": expense_count,
+        "income_created": income_count,
+    }
