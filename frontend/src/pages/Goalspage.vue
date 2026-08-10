@@ -23,7 +23,7 @@
       </div>
 
       <!-- Featured goal -->
-      <div class="mk-featured-card" :style="{ background: featuredGoal.gradient }">
+      <div v-if="featuredGoal" class="mk-featured-card" :style="{ background: featuredGoal.gradient }">
         <div class="mk-featured-visual">
           <q-icon :name="featuredGoal.icon" size="72px" color="white" class="mk-featured-icon" />
           <div class="mk-badge">{{ featuredGoal.progress }}% ACHIEVED</div>
@@ -98,9 +98,9 @@
       <div class="mk-footer">
         <div class="mk-footer-brand">by Bug Creator &bull; 2083 B.S.</div>
         <div class="mk-footer-links">
-          <span class="mk-link-muted">Privacy Policy</span>
+          <span class="mk-link-muted" @click="router.push({ name: 'privacy' })">Privacy Policy</span>
           <span class="mk-dot">&bull;</span>
-          <span class="mk-link-muted">Terms of Service</span>
+          <span class="mk-link-muted" @click="router.push({ name: 'terms' })">Terms of Service</span>
         </div>
       </div>
     </div>
@@ -134,19 +134,48 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
-defineEmits(['open-settings', 'nav-change'])
+const emit = defineEmits(['open-settings', 'nav-change'])
 
 const router = useRouter()
+const route = useRoute()
 
-// Navigate to the Add Dream screen (was: emit('add-goal')).
+// Map your router route names to navigation keys
+const activeNav = ref(route.name || 'goals')
+
+// Keep active indicator in sync with current route name
+watch(
+  () => route.name,
+  (newRouteName) => {
+    if (newRouteName) {
+      activeNav.value = newRouteName
+    }
+  },
+  { immediate: true }
+)
+
+// Corrected navItems array to match exact route names from router/index.js
+const navItems = [
+  { name: 'dashboard', label: 'Home', icon: 'home' },
+  { name: 'goals', label: 'Goals', icon: 'track_changes' },
+  { name: 'imports', label: 'Import', icon: 'description' },
+  { name: 'profile', label: 'Profile', icon: 'person_outline' }
+]
+
+function setActive (routeName) {
+  activeNav.value = routeName
+  emit('nav-change', routeName)
+  
+  // Programmatic router navigation
+  router.push({ name: routeName })
+}
+
 function goToAddDream () {
   router.push({ name: 'add-dream' })
 }
 
-const activeNav = ref('goals')
 const yearLabel = '2083 B.S.'
 
 const goals = ref([
@@ -179,27 +208,17 @@ const goals = ref([
   }
 ])
 
-const featuredGoal = computed(() => goals.value[0])
+const featuredGoal = computed(() => goals.value[0] || null)
 const otherGoals = computed(() => goals.value.slice(1))
 
 const avgProgress = computed(() => {
+  if (!goals.value.length) return 0
   const total = goals.value.reduce((sum, g) => sum + g.progress, 0)
   return Math.round(total / goals.value.length)
 })
 
-const navItems = [
-  { name: 'home', label: 'Home', icon: 'home' },
-  { name: 'goals', label: 'Goals', icon: 'track_changes' },
-  { name: 'import', label: 'Import', icon: 'description' },
-  { name: 'profile', label: 'Profile', icon: 'person_outline' }
-]
-
-function setActive (name) {
-  activeNav.value = name
-}
-
 function formatAmount (value) {
-  return Number(value).toLocaleString('en-IN')
+  return Number(value || 0).toLocaleString('en-IN')
 }
 </script>
 
@@ -469,7 +488,7 @@ function formatAmount (value) {
   display: flex;
   justify-content: space-around;
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-  z-index: 15;
+  z-index: 2000; /* Ensures bottom bar stays on top of Quasar page content */
 }
 
 .mk-nav-item {
@@ -481,6 +500,8 @@ function formatAmount (value) {
   border-radius: 12px;
   color: #9ca3af;
   cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mk-nav-label {
