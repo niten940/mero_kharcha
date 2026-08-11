@@ -5,7 +5,7 @@ Expenses router — handles all expense-related routes for Mero Kharcha.
 from fastapi import HTTPException
 from datetime import date
 from category_rules import suggest_category
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import get_db
 from sqlalchemy.orm.session import Session
 from fastapi import APIRouter, Depends
@@ -18,7 +18,7 @@ router_expense = APIRouter()
 class ExpenseInput(BaseModel):
     title: str
     category: str
-    amount: float
+    amount: float = Field(..., gt=0, description="Amount must be greater than zero.")
     date: date
     description: str
 

@@ -11,3 +11,5 @@ pip install slowapi
 pip install better-profanity 
 pip install pytesseract pillow
 pip install pydantic[email]
+pip install xlrd --break-system-packages
+pip install google-generativeai --break-system-packages
