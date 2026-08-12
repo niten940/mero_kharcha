@@ -3,9 +3,11 @@ from datetime import date
 from pydantic import BaseModel
 from database import get_db
 from sqlalchemy.orm.session import Session
+from sqlalchemy import func
 from fastapi import APIRouter, Depends
 from JWT_Authentication.auth import get_current_user
-from sqlAlchemy.goals_model import Goals
+from sql_Alchemy_db_model.goals_model import Goals
+from sql_Alchemy_db_model.goal_deposit_model import Goal_Deposit
 from datetime import date, timedelta
 
 router_goals = APIRouter()
@@ -19,12 +21,14 @@ class GoalsInput(BaseModel):
     description: str
 
 
-def calculate_goal_progress(goal: Goals) -> dict:
+def calculate_goal_progress(goal: Goals, db: Session) -> dict:
     """
-    Calculate progress percentage, remaining amount, and required monthly payment for a goal.
+    Calculate progress percentage, remaining amount, and required monthly payment for a goal,
+    using a rolling 3-month deposit average (velocity engine) for projected completion date.
 
     Args:
         goal (Goals): The goal database record.
+        db (Session): The active SQLAlchemy database session dependency.
 
     Returns:
         dict: The goal's fields plus 'progress_percent', 'remaining_amount', 'projected_completion_date', and 'required_monthly_payment'.
@@ -35,23 +39,41 @@ def calculate_goal_progress(goal: Goals) -> dict:
     progress_percent = round((current / target) * 100, 2) if target > 0 else 0
     remaining_amount = round(target - current, 2)
 
-    months_elapsed = max(1, (date.today().year - goal.created_at.date().year) * 12 + (date.today().month - goal.created_at.date().month))
-    avg_monthly_saving = current / months_elapsed
+    # Rolling 3-month deposit velocity: sum deposits from the last 3 calendar months,
+    # divide by 3 regardless of how many of those months actually had deposits.
+    three_months_ago = date.today() - timedelta(days=90)
+
+    recent_deposits_total = float(
+        db.query(func.sum(Goal_Deposit.amount))
+        .filter(
+            Goal_Deposit.goal_id == goal.id,
+            Goal_Deposit.date >= three_months_ago,
+        )
+        .scalar()
+        or 0
+    )
+    avg_monthly_saving = recent_deposits_total / 3
 
     if avg_monthly_saving > 0 and remaining_amount > 0:
         months_left = remaining_amount / avg_monthly_saving
-        projected_completion_date = date.today() + timedelta(days=round(months_left * 30))
+        projected_completion_date = date.today() + timedelta(
+            days=round(months_left * 30)
+        )
     elif remaining_amount <= 0:
         projected_completion_date = date.today()
     else:
         projected_completion_date = None
 
-    months_to_deadline = (goal.target_date.year - date.today().year) * 12 + (goal.target_date.month - date.today().month)
+    months_to_deadline = (goal.target_date.year - date.today().year) * 12 + (
+        goal.target_date.month - date.today().month
+    )
 
     if remaining_amount <= 0:
         required_monthly_payment = 0
     elif months_to_deadline <= 0:
-        required_monthly_payment = remaining_amount  # deadline is this month or has passed — pay it all now
+        required_monthly_payment = (
+            remaining_amount  # deadline is this month or has passed — pay it all now
+        )
     else:
         required_monthly_payment = round(remaining_amount / months_to_deadline, 2)
 
@@ -102,7 +124,7 @@ def get_goals(
     if goal_details is None:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    return calculate_goal_progress(goal_details)
+    return calculate_goal_progress(goal_details, db)
 
 
 @router_goals.get(
@@ -128,11 +150,20 @@ def get_goals_Query(
         .filter(Goals.user_id == current_user["user_id"])
         .order_by(Goals.id.desc())
     )
-    return [calculate_goal_progress(g) for g in query.all()]
+    return [calculate_goal_progress(g, db) for g in query.all()]
 
 
-@router_goals.post("/post/", status_code=201, summary="Create a new goal", description="Creates a new financial goal entry associated with the logged-in user.")
-def create_goal(goal: GoalsInput, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+@router_goals.post(
+    "/post/",
+    status_code=201,
+    summary="Create a new goal",
+    description="Creates a new financial goal entry associated with the logged-in user.",
+)
+def create_goal(
+    goal: GoalsInput,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Create a new goal entry in the database.
 
@@ -152,16 +183,25 @@ def create_goal(goal: GoalsInput, current_user: dict = Depends(get_current_user)
         current_amount=goal.current_amount,
         goal_amount=goal.goal_amount,
         description=goal.description,
-        target_date=goal.target_date
+        target_date=goal.target_date,
     )
     db.add(add_goals)
     db.commit()
     db.refresh(add_goals)
-    return calculate_goal_progress(add_goals)
+    return calculate_goal_progress(add_goals, db)
 
 
-@router_goals.put("/put/{goal_id}", summary="Update an existing goal", description="Updates all fields of a specific goal by ID. Returns 404 if the goal doesn't exist.")
-def update_goal(goal: GoalsInput, goal_id: int, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+@router_goals.put(
+    "/put/{goal_id}",
+    summary="Update an existing goal",
+    description="Updates all fields of a specific goal by ID. Returns 404 if the goal doesn't exist.",
+)
+def update_goal(
+    goal: GoalsInput,
+    goal_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Update an existing goal entry in the database with fresh data.
 
@@ -177,7 +217,11 @@ def update_goal(goal: GoalsInput, goal_id: int, current_user: dict = Depends(get
     Returns:
         dict: The updated goal's fields plus progress_percent, remaining_amount, projected_completion_date, and required_monthly_payment.
     """
-    goal_record = db.query(Goals).filter(Goals.id == goal_id, Goals.user_id == current_user["user_id"]).first()
+    goal_record = (
+        db.query(Goals)
+        .filter(Goals.id == goal_id, Goals.user_id == current_user["user_id"])
+        .first()
+    )
     if not goal_record:
         raise HTTPException(status_code=404, detail=f"Goals id {goal_id} not found.")
 
@@ -187,7 +231,8 @@ def update_goal(goal: GoalsInput, goal_id: int, current_user: dict = Depends(get
 
     db.commit()
     db.refresh(goal_record)
-    return calculate_goal_progress(goal_record)
+    return calculate_goal_progress(goal_record, db)
+
 
 @router_goals.delete(
     "/dlt/{goal_id}",

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy import *
-from sqlAlchemy.base import Base
+from sql_Alchemy_db_model.base import Base
 from sqlalchemy import Enum as SqlEnum
 from enum import Enum
 

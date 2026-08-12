@@ -3,7 +3,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from database import get_db
 from JWT_Authentication.auth import get_current_user
-from sqlAlchemy.expense_models import Expenses
+from sql_Alchemy_db_model.expense_models import Expenses
 
 router_reports = APIRouter()
 

@@ -4,12 +4,13 @@ Expenses router — handles all expense-related routes for Mero Kharcha.
 
 from fastapi import HTTPException
 from datetime import date
+from category_rules import suggest_category
 from pydantic import BaseModel
 from database import get_db
 from sqlalchemy.orm.session import Session
 from fastapi import APIRouter, Depends
 from JWT_Authentication.auth import get_current_user
-from sqlAlchemy.expense_models import Expenses
+from sql_Alchemy_db_model.expense_models import Expenses
 
 router_expense = APIRouter()
 
@@ -20,6 +21,11 @@ class ExpenseInput(BaseModel):
     amount: float
     date: date
     description: str
+
+
+class CategorySuggestionInput(BaseModel):
+    title: str
+    description: str = ""
 
 
 @router_expense.get(
@@ -207,3 +213,24 @@ def delete_expense(
     db.delete(expenses)
     db.commit()
     return {"message": f"Expense id {expense_id} is deleted successfully."}
+
+
+@router_expense.post(
+    "/suggest-category",
+    summary="Suggest a category for an expense based on its title/description",
+    description="Returns a keyword-matched category suggestion. Frontend should let the user confirm or override before saving.",
+)
+def suggest_expense_category(
+    payload: CategorySuggestionInput, current_user: dict = Depends(get_current_user)
+):
+    """
+    Suggest a category for an expense using keyword matching against title and description.
+
+    Args:
+        payload (CategorySuggestionInput): The title and optional description to match against.
+        current_user (dict): The current authenticated user.
+
+    Returns:
+        dict: 'suggested_category' (str or null if no keyword matched).
+    """
+    return {"suggested_category": suggest_category(payload.title, payload.description)}
