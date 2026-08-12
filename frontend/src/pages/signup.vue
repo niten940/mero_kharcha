@@ -2,14 +2,18 @@
   <q-page class="mk-page flex flex-center">
     <div class="mk-shell">
       <!-- Brand -->
-      <div class="mk-brand">
-        <h1 class="mk-title">Mero Kharcha</h1>
-        <p class="mk-subtitle">Your financial companion for the journey ahead.</p>
-      </div>
+      
 
       <!-- Signup Card -->
       <q-form @submit="onSubmit" class="mk-card bg-white">
         <div class="mk-card-header text-center">
+          <div class="mk-brand">
+            <div class="mk-logo">
+              
+            <MeroKharchaLogo />
+          </div>
+            <p class="mk-subtitle">Your financial companion for the journey ahead.</p>
+          </div>
           <h2 class="mk-card-title">Start Your Journey</h2>
           <div class="mk-card-eyebrow">CREATE A NEW ACCOUNT</div>
         </div>
@@ -279,6 +283,7 @@
 </template>
 
 <script setup>
+import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
@@ -466,6 +471,7 @@ async function onSubmit() {
   text-align: center;
   margin-bottom: 24px;
 }
+
 
 .mk-title {
   font-size: 26px;

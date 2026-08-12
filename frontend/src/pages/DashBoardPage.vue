@@ -1,15 +1,17 @@
 <template>
+  
   <q-page class="mk-page">
     <div class="mk-shell">
       <!-- Header -->
       <div class="mk-header row items-center justify-between">
         <div class="row items-center mk-brand-row">
-          <q-avatar size="36px" class="mk-avatar">
+          <!-- <q-avatar size="36px" class="mk-avatar">
             <q-icon name="person" size="20px" color="white" />
-          </q-avatar>
-          <div class="mk-brand-name">Mero Kharcha</div>
+          </q-avatar> -->
+          <MeroKharchaLogo :size="10" />
+          <!-- <div class="mk-brand-name">Mero Kharcha</div> -->
         </div>
-        <q-btn flat round dense icon="settings" color="grey-8" @click="handleOpenSettings" />
+        <!-- <q-btn flat round dense icon="settings" color="grey-8" @click="handleOpenSettings" /> -->
       </div>
 
       <!-- Loading Spinner -->
@@ -144,6 +146,7 @@
 </template>
 
 <script setup>
+import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
