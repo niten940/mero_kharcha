@@ -2,14 +2,14 @@
   <div class="logo-container">
     <img
       :src="logo"
-      alt="Mero Kharcha"
+      alt="Bug Creator"
       class="bug-creator-logo"
     />
   </div>
 </template>
 
 <script setup>
-import logo from '@/images/Mero_Kharcha.png'
+import logo from '@/images/Bug_Creator.png'
 </script>
 
 <style scoped>
@@ -19,7 +19,7 @@ import logo from '@/images/Mero_Kharcha.png'
   width: 100px;
   max-width: 550px;
   height: auto;
-  display: auto;
+  display: centred;
   object-fit: contain;
 }
 </style>
