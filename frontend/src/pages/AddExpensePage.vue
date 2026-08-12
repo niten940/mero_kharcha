@@ -3,7 +3,9 @@
     <div class="mk-shell">
       <!-- Header -->
       <div class="mk-header row items-center justify-between">
+                  
         <q-btn round flat dense icon="arrow_back" color="primary" class="mk-icon-btn" @click="goBack" />
+        <MeroKharchaLogo :size="10" />
         <div class="mk-page-title">Add Expense</div>
         <q-btn round flat dense icon="settings" color="grey-8" @click="$emit('open-settings')" />
       </div>
@@ -137,6 +139,7 @@
 </template>
 
 <script setup>
+import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 

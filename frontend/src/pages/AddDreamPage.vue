@@ -58,22 +58,38 @@
               </template>
             </q-input>
           </div>
-
-          <div>
-            <div class="mk-label">Dream Category</div>
-            <div class="mk-category-scroll">
-              <div
-                v-for="cat in categories"
-                :key="cat.id"
-                class="mk-category-pill"
-                :class="{ 'mk-category-pill-active': form.category === cat.id }"
-                @click="form.category = cat.id"
-              >
-                <q-icon :name="cat.icon" size="16px" class="q-mr-xs" />
-                {{ cat.label }}
-              </div>
-            </div>
-          </div>
+<div>
+  <div class="mk-label">Dream Category</div>
+  <q-select
+    v-model="form.category"
+    dense
+    outlined
+    emit-value
+    map-options
+    :options="categories"
+    option-value="id"
+    option-label="label"
+    class="mk-select"
+  >
+    <template #option="scope">
+      <q-item v-bind="scope.itemProps">
+        <q-item-section avatar class="min-width-auto">
+          <q-icon :name="scope.opt.icon" size="18px" color="primary" />
+        </q-item-section>
+        <q-item-section>
+          <q-item-label>{{ scope.opt.label }}</q-item-label>
+        </q-item-section>
+      </q-item>
+    </template>
+    
+    <template #selected-item="scope">
+      <div class="row items-center">
+        <q-icon :name="scope.opt.icon" size="18px" color="primary" class="q-mr-sm" />
+        <span>{{ scope.opt.label }}</span>
+      </div>
+    </template>
+  </q-select>
+</div>
         </q-card-section>
       </q-card>
 
@@ -343,19 +359,10 @@ async function onSave () {
   font-weight: 700;
 }
 
-.mk-category-scroll {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
+.min-width-auto {
+  min-width: auto;
+  padding-right: 8px;
 
-.mk-category-pill {
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-  padding: 8px 16px;
-  border-radius: 999px;
   background: #eef1f0;
   color: #4b5563;
   font-size: 13px;

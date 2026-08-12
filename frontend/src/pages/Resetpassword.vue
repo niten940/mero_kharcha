@@ -1,22 +1,22 @@
 <template>
   <q-page class="mk-page flex flex-center">
     <div class="mk-shell">
-      <!-- Back -->
-     <router-link to="/login" class="mk-back flex items-center q-gutter-xs text-teal" style="text-decoration: none; cursor: pointer;">
-  <q-icon name="arrow_back" size="18px" />
-  <span>Back</span>
-</router-link>
+     
 
       <!-- Brand -->
-      <div class="mk-brand">
-        <div class="mk-logo">
-          <q-icon name="lock_reset" size="26px" color="white" />
-        </div>
-        <div class="mk-title">Mero Kharcha</div>
-      </div>
+     
 
       <!-- Card -->
       <q-card flat class="mk-card">
+         <!-- Back -->
+        <router-link to="/login" class="mk-back flex items-center q-gutter-xs text-teal" style="text-decoration: none; cursor: pointer;">
+           <q-icon name="arrow_back" size="18px" />
+            <span>Back</span>
+        </router-link>
+         <div class="mk-brand">
+        <!-- // diplays the logo of the app -->
+           <MeroKharchaLogo :size="10" /> 
+         </div>
         <q-card-section>
           <div class="mk-card-title">Reset Password</div>
           <div class="mk-card-desc">
@@ -100,6 +100,7 @@
 </template>
 
 <script setup>
+import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue' // imports the logo component
 import { ref } from 'vue'
 
 const emit = defineEmits(['go-login', 'submit'])

@@ -4,12 +4,12 @@
       <!-- Header -->
       <div class="mk-header row items-center justify-between">
         <div class="row items-center mk-brand-row">
-          <q-avatar size="36px" class="mk-avatar">
+          <!-- <q-avatar size="36px" class="mk-avatar">
             <q-icon name="person" size="20px" color="white" />
-          </q-avatar>
-          <div class="mk-brand-name">Mero Kharcha</div>
+          </q-avatar> -->
+          <MeroKharchaLogo :size="10" />
         </div>
-        <q-btn flat round dense icon="settings" color="grey-8" @click="$emit('open-settings')" />
+        <!-- <q-btn flat round dense icon="settings" color="grey-8" @click="$emit('open-settings')" /> -->
       </div>
 
       <!-- Loading State -->
@@ -66,8 +66,8 @@
             <q-icon name="shield" size="18px" color="primary" />
           </q-avatar>
           <div class="col mk-pref-info">
-            <div class="mk-pref-title">Account Security</div>
-            <div class="mk-pref-sub">2FA, Biometrics, Password</div>
+            <div class="mk-pref-title">Account Settings</div>
+            <!-- <div class="mk-pref-sub">2FA, Biometrics, Password</div> -->
           </div>
           <q-icon name="chevron_right" size="20px" color="grey-5" />
         </div>
@@ -77,8 +77,8 @@
             <q-icon name="notifications" size="18px" color="amber-8" />
           </q-avatar>
           <div class="col mk-pref-info">
-            <div class="mk-pref-title">Notification Preferences</div>
-            <div class="mk-pref-sub">Alerts, Reports, Budgets</div>
+            <div class="mk-pref-title">Notifications</div>
+            <!-- <div class="mk-pref-sub">Alerts, Reports, Budgets</div> -->
           </div>
           <q-icon name="chevron_right" size="20px" color="grey-5" />
         </div>
@@ -110,7 +110,7 @@
 
         <q-separator class="q-my-sm" />
 
-        <div class="row items-center justify-between mk-settings-row">
+        <!-- <div class="row items-center justify-between mk-settings-row">
           <div class="row items-center mk-settings-label">
             <q-icon name="language" size="18px" color="grey-7" class="q-mr-sm" />
             Language
@@ -130,7 +130,7 @@
             ]"
             @update:model-value="val => $emit('language-change', val)"
           />
-        </div>
+        </div> -->
       </div>
 
       <!-- Logout Button -->
@@ -175,6 +175,7 @@
 </template>
 
 <script setup>
+import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'

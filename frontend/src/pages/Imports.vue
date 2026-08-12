@@ -16,12 +16,12 @@ Here is the cleaned-up, fully functional Vue 3 component code.
       <!-- Header -->
       <div class="mk-header row items-center justify-between">
         <div class="row items-center mk-brand-row">
-          <q-avatar size="36px" class="mk-avatar">
+          <!-- <q-avatar size="36px" class="mk-avatar">
             <q-icon name="person" size="20px" color="white" />
-          </q-avatar>
-          <div class="mk-brand-name">Mero Kharcha</div>
+          </q-avatar> -->
+         <MeroKharchaLogo :size="10" />
         </div>
-        <q-btn flat round dense icon="settings" color="grey-8" @click="$emit('open-settings')" />
+        <!-- <q-btn flat round dense icon="settings" color="grey-8" @click="$emit('open-settings')" /> -->
       </div>
 
       <!-- Title -->
@@ -144,6 +144,7 @@ Here is the cleaned-up, fully functional Vue 3 component code.
 </template>
 
 <script setup>
+import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 

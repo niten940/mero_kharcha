@@ -3,11 +3,12 @@
     <div class="mk-login-card">
       <!-- Header / Logo -->
       <div class="text-center q-mb-lg">
-        <q-avatar size="56px" class="mk-logo-avatar q-mb-sm">
+        <!-- <q-avatar size="56px" class="mk-logo-avatar q-mb-sm">
           <q-icon name="account_balance_wallet" size="32px" color="white" />
         </q-avatar>
         <div class="text-h5 text-weight-bold text-teal-10">Mero Kharcha</div>
-        <div class="text-caption text-grey-7">Welcome back! Please login to your account.</div>
+        <div class="text-caption text-grey-7">Welcome back! Please login to your account.</div> -->
+        <MeroKharchaLogo :size="30" />
       </div>
 
       <!-- Error Alert -->
@@ -72,6 +73,7 @@
 </template>
 
 <script setup>
+import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api' // Imports directly from src/api.js
