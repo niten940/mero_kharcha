@@ -14,7 +14,7 @@ import re
 from datetime import date, datetime
 import pandas as pd
 import pdfplumber
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
@@ -22,6 +22,12 @@ from JWT_Authentication.auth import get_current_user
 from sql_Alchemy_db_model.expense_models import Expenses
 from sql_Alchemy_db_model.income_model import Income
 from category_rules import suggest_category
+from datetime import date as date_today
+from sqlalchemy import func
+from sql_Alchemy_db_model.budget_model import Budget
+from sql_Alchemy_db_model.user_models import Users
+from routers.email_notifications import send_budget_exceeded_email
+
 
 router_imports = APIRouter()
 
@@ -423,15 +429,17 @@ async def parse_statement(
     "/confirm",
     status_code=201,
     summary="Confirm ingestion of parsed transactions",
-    description="Saves confirmed transactions — negative amount → Expenses, positive → Income.",
+    description="Saves confirmed transactions — negative amount → Expenses, positive → Income. Triggers budget exceeded email if monthly limit is breached.",
 )
 def confirm_ingestion(
     payload: ConfirmIngestionInput,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Save confirmed parsed transactions into Expenses or Income based on amount sign.
+    Triggers a budget exceeded email if the monthly total crosses the limit after import.
 
     Args:
         payload (ConfirmIngestionInput): Confirmed transactions with date, title,
@@ -442,6 +450,8 @@ def confirm_ingestion(
     Returns:
         dict: Counts of expense and income rows created.
     """
+
+
     user_id = current_user["user_id"]
     expense_count = income_count = 0
 
@@ -468,6 +478,27 @@ def confirm_ingestion(
             income_count += 1
 
     db.commit()
+
+    # Check budget after all rows committed — trigger email if limit breached.
+    if expense_count > 0:
+        budget = db.query(Budget).filter(Budget.user_id == user_id).first()
+        if budget:
+            month_start = date_today.today().replace(day=1)
+            current_month_total = db.query(func.sum(Expenses.amount)).filter(
+                Expenses.user_id == user_id,
+                Expenses.date >= month_start,
+            ).scalar() or 0
+
+            if current_month_total > budget.monthly_limit:
+                user = db.query(Users).filter(Users.id == user_id).first()
+                background_tasks.add_task(
+                    send_budget_exceeded_email,
+                    to_email=user.email,
+                    full_name=user.full_name,
+                    monthly_limit=float(budget.monthly_limit),
+                    current_total=round(float(current_month_total), 2),
+                )
+
     return {
         "message": "Ingestion complete",
         "expenses_created": expense_count,

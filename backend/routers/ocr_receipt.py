@@ -10,17 +10,18 @@ import os
 from datetime import date, datetime
 import pytesseract
 from PIL import Image
-import google.generativeai as genai
+from google.genai import Client as GenaiClient
 import json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from JWT_Authentication.auth import get_current_user
 from category_rules import suggest_category
 from dotenv import load_dotenv
+from google.genai import types as genai_types
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+client = GenaiClient(api_key=os.getenv("GEMINI_API_KEY"))
 
 router_ocr = APIRouter()
 
@@ -167,7 +168,7 @@ async def scan_receipt_ai(
 
     Raises:
         HTTPException: 400 for unsupported file types.
-        HTTPException: 422 if Gemini returns unparseable output.
+        HTTPException: 422 if Gemini returns unparsable output.
         HTTPException: 503 if the Gemini API is unreachable.
 
     Returns:
@@ -209,12 +210,14 @@ Return exactly this JSON shape:
 """
 
     try:
-        model = genai.GenerativeModel("gemini-3.5-flash")
-        response = model.generate_content([
-            {"mime_type": mime_type, "data": file_bytes},
-            prompt,
-        ])
-
+        
+        response = client.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=[
+                genai_types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
+                prompt,
+            ],
+        )
         raw = response.text.strip()
         # Strip markdown fences if Gemini wraps output despite instructions.
         if raw.startswith("```"):
