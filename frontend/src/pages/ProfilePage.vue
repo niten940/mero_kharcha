@@ -60,17 +60,19 @@
       <!-- Preferences -->
       <div class="mk-section-title">PREFERENCES</div>
 
-      <div class="mk-pref-list">
-        <div class="mk-pref-row" @click="$emit('open-security')">
-          <q-avatar size="38px" class="mk-pref-icon" style="background:#e7f3ee">
-            <q-icon name="shield" size="18px" color="primary" />
-          </q-avatar>
-          <div class="col mk-pref-info">
-            <div class="mk-pref-title">Account Settings</div>
-            <!-- <div class="mk-pref-sub">2FA, Biometrics, Password</div> -->
-          </div>
-          <q-icon name="chevron_right" size="20px" color="grey-5" />
-        </div>
+   <div class="mk-pref-list">
+  <!-- Navigate using route path -->
+  <div class="mk-pref-row" @click="$router.push('/settings')">
+    <q-avatar size="38px" class="mk-pref-icon" style="background:#e7f3ee">
+      <q-icon name="shield" size="18px" color="primary" />
+    </q-avatar>
+    <div class="col mk-pref-info">
+      <div class="mk-pref-title">Account Settings</div>
+      <!-- <div class="mk-pref-sub">2FA, Biometrics, Password</div> -->
+    </div>
+    <q-icon name="chevron_right" size="20px" color="grey-5" />
+  </div>
+
 
         <div class="mk-pref-row" @click="$emit('open-notifications')">
           <q-avatar size="38px" class="mk-pref-icon" style="background:#fdf1d8">
@@ -148,11 +150,11 @@
 
       <!-- App brand footer -->
       <div class="mk-brand-footer">
-        <div class="mk-brand-icon">
+        <!-- <div class="mk-brand-icon">
           <q-icon name="terminal" size="24px" color="white" />
-        </div>
-        <div class="mk-brand-footer-name">Bug Creator</div>
-        <div class="mk-brand-footer-tag">Empowering local financial growth</div>
+        </div> -->
+        <BugCretorLogo :size="6" />
+        <!-- <div class="mk-brand-footer-tag">Empowering local financial growth</div> -->
       </div>
     </div>
 
@@ -176,6 +178,7 @@
 
 <script setup>
 import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
+import BugCretorLogo from '@/components/BugCreatorLogo.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'

@@ -13,6 +13,7 @@ import profile from '../pages/ProfilePage.vue'
 import AddExpensePage from '../pages/AddExpensePage.vue'
 import LinkedAccountsView from '../pages/LinkedAccountsPage.vue'
 import AddDream from '../pages/AddDreamPage.vue' // Fixed path!
+import settings from '../pages/ProfileSetting.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -76,6 +77,11 @@ const router = createRouter({
       path: '/add-dream',
       name: 'add-dream',
       component: AddDream
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: settings
     },
     // Catch-all fallback to Dashboard if unknown path is entered
     {
