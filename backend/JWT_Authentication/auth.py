@@ -131,23 +131,25 @@ def get_current_admin(
     return current_user
 
 
-def create_password_reset_token(user_id: int) -> str:
+def create_password_reset_token(username: str, user_id: int) -> str:
     """
-    Create a short-lived JWT scoped only for password reset (not a login token).
+    Create a short-lived JWT scoped only for password reset.
 
     Args:
+        username (str): The username of the user requesting a reset.
         user_id (int): The ID of the user requesting a reset.
 
     Returns:
-        str: Signed JWT valid for 15 minutes, with a 'purpose' claim to prevent misuse as a login token.
+        str: Signed JWT valid for 15 minutes, with a 'purpose' claim
+            to prevent misuse as a login token.
     """
     to_encode = {
+        "sub": username,
         "user_id": user_id,
         "purpose": "password_reset",
         "exp": datetime.utcnow() + timedelta(minutes=15),
     }
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
 
 def verify_password_reset_token(token: str) -> int:
     """

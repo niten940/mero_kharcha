@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from routers import (expenses, incomes, reports, goals, recurring, budget, import_statement, goal_deposit, behavior, opportunity_cost, calendar_bs, admin, ocr_receipt,)
+from routers import (expenses, incomes, reports, goals, recurring, budget, import_statement, goal_deposit, behavior, opportunity_cost, calendar_bs, admin, ocr_receipt, financial_health)
 from JWT_Authentication import auth
 from fastapi.middleware.cors import CORSMiddleware
 from rate_limiter import limiter
@@ -35,13 +35,14 @@ app.add_middleware(
 #authentication routes
 app.include_router(register.router_register, prefix="/auth", tags=["Register"])
 app.include_router(login.router_auth_login, prefix="/auth", tags=["Login"])
-app.include_router(forgot_password.router_password, prefix="/auth", tags=["Password Reset"])
+app.include_router(forgot_password.router_forgot_password, prefix="/auth", tags=["Password Reset"])
 app.include_router(token_refresh.router_token, prefix="/auth", tags=["Token Refresh"])
 
 #Functionality routes
 app.include_router(expenses.router_expense, prefix="/expenses", tags=["Expenses"])
 app.include_router(incomes.router_income, prefix="/incomes", tags=["Incomes"])
 app.include_router(goals.router_goals, prefix="/goals", tags=["Goals"])
+app.include_router(financial_health.router_financial_health, prefix="/health", tags=["Financial Health"])
 app.include_router(import_statement.router_imports, prefix="/imports", tags=["Imports"])
 app.include_router(recurring.router_recurring, prefix="/recurring", tags=["Recurring"])
 app.include_router(budget.router_budget, prefix="/budget", tags=["Budget"])

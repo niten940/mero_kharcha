@@ -132,8 +132,7 @@ def create_goal_deposit(
     )
     db.add(add_goal_deposit)
 
-    goal_record.current_amount += goalDeposit.amount
-
+    goal_record.current_amount = float(goal_record.current_amount) + goalDeposit.amount
     db.commit()
     db.refresh(add_goal_deposit)
     return add_goal_deposit
@@ -249,7 +248,7 @@ def delete_goal_deposit(
     )
 
     if goal_record:
-        goal_record.current_amount -= goal_deposit_record.amount
+        goal_record.current_amount = float(goal_record.current_amount) - float(goal_deposit_record.amount)
 
     db.delete(goal_deposit_record)
     db.commit()

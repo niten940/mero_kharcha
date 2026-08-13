@@ -1,16 +1,19 @@
 """
 Expenses router — handles all expense-related routes for Mero Kharcha.
 """
-
-from fastapi import HTTPException
-from datetime import date
+from datetime import date as date_today
 from category_rules import suggest_category
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import get_db
 from sqlalchemy.orm.session import Session
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from JWT_Authentication.auth import get_current_user
 from sql_Alchemy_db_model.expense_models import Expenses
+from routers.email_notifications import send_budget_exceeded_email
+from sql_Alchemy_db_model.budget_model import Budget
+from sql_Alchemy_db_model.user_models import Users
+from sqlalchemy import func
+
 
 router_expense = APIRouter()
 
@@ -18,8 +21,8 @@ router_expense = APIRouter()
 class ExpenseInput(BaseModel):
     title: str
     category: str
-    amount: float
-    date: date
+    amount: float = Field(..., gt=0, description="Amount must be greater than zero.")
+    date: date_today
     description: str
 
 
@@ -104,6 +107,7 @@ def get_expense_Query(
 )
 def create_expense(
     expense: ExpenseInput,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -130,6 +134,25 @@ def create_expense(
     db.add(add_expenses)
     db.commit()
     db.refresh(add_expenses)
+
+    budget = db.query(Budget).filter(Budget.user_id == user_id).first()
+    if budget:
+        current_month_total = db.query(func.sum(Expenses.amount)).filter(
+        Expenses.user_id == user_id,
+        func.date_trunc("month", Expenses.date) == func.date_trunc(
+            "month", func.cast(date_today.today(), Expenses.date.type)
+        ),
+    ).scalar() or 0
+
+        if current_month_total > budget.monthly_limit:
+            user = db.query(Users).filter(Users.id == user_id).first()
+            background_tasks.add_task(
+                send_budget_exceeded_email,
+                to_email=user.email,
+                full_name=user.full_name,
+                monthly_limit=float(budget.monthly_limit),
+                current_total=round(float(current_month_total), 2),
+            )
     return add_expenses
 
 

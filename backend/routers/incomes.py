@@ -4,7 +4,7 @@ Incomes router — handles all income-related routes for Mero Kharcha.
 
 from fastapi import HTTPException
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import get_db
 from sqlalchemy.orm.session import Session
 from fastapi import APIRouter, Depends
@@ -16,7 +16,7 @@ router_income = APIRouter()
 
 class IncomeInput(BaseModel):
     title: str
-    amount: float
+    amount: float = Field(..., gt=0, description="Amount must be greater than zero.")
     description: str
     received_from: str
     date: date

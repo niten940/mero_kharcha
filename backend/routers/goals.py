@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from database import get_db
 from sqlalchemy.orm.session import Session
 from sqlalchemy import func
@@ -15,10 +15,17 @@ router_goals = APIRouter()
 
 class GoalsInput(BaseModel):
     title: str
-    current_amount: float
-    goal_amount: float
+    current_amount: float = Field(..., ge=0, description="Current amount cannot be negative.")
+    goal_amount: float = Field(..., gt=0, description="Goal amount must be greater than zero.")
     target_date: date
     description: str
+
+    @field_validator("target_date")
+    @classmethod
+    def target_date_must_not_be_past(cls, v: date) -> date:
+        if v < date.today():
+            raise ValueError("Target date cannot be in the past.")
+        return v
 
 
 def calculate_goal_progress(goal: Goals, db: Session) -> dict:

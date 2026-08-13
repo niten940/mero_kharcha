@@ -1,17 +1,27 @@
 """
-OCR receipt scanning — extracts title/amount/date from a photographed receipt
-image, then feeds the result through the same normalization pattern as imports.py.
-Accuracy depends heavily on receipt layout/print quality — demo on clean samples.
+OCR receipt scanning — two backends:
+  - /ocr/scan: pytesseract (offline, good for printed text)
+  - /ocr/scan-ai: Gemini vision (online, handles handwritten Devanagari and PDFs)
 """
 
 import io
 import re
+import os
 from datetime import date, datetime
 import pytesseract
 from PIL import Image
+from google.genai import Client as GenaiClient
+import json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from JWT_Authentication.auth import get_current_user
 from category_rules import suggest_category
+from dotenv import load_dotenv
+from google.genai import types as genai_types
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+client = GenaiClient(api_key=os.getenv("GEMINI_API_KEY"))
 
 router_ocr = APIRouter()
 
@@ -81,24 +91,27 @@ def _extract_title(text: str) -> str:
 
 @router_ocr.post(
     "/scan",
-    summary="Extract transaction details from a photographed receipt",
-    description="Runs OCR on an uploaded receipt image and extracts a best-guess title, amount, date, and suggested category. Accuracy varies by receipt layout — user should review before confirming.",
+    summary="Extract transaction details from a receipt using Tesseract OCR",
+    description=(
+        "Runs offline OCR on an uploaded receipt image. Works well for printed text. "
+        "For handwritten Devanagari or PDFs, use /ocr/scan-ai instead."
+    ),
 )
 async def scan_receipt(
     file: UploadFile = File(...), current_user: dict = Depends(get_current_user)
 ):
     """
-    Extract transaction fields from a photographed receipt using OCR.
+    Extract transaction fields from a receipt image using pytesseract.
 
     Args:
-        file (UploadFile): The uploaded receipt image (jpg/png).
+        file (UploadFile): The uploaded receipt image (JPG/PNG).
         current_user (dict): The current authenticated user.
 
     Raises:
         HTTPException: 400 for unsupported file types, 422 if OCR yields no readable text.
 
     Returns:
-        dict: Best-guess 'title', 'amount', 'date', 'suggested_category', and the raw OCR text for user review.
+        dict: Best-guess title, amount, date, suggested_category, and raw OCR text.
     """
     filename = file.filename.lower()
     if not filename.endswith((".jpg", ".jpeg", ".png")):
@@ -126,4 +139,122 @@ async def scan_receipt(
         "date": parsed_date.isoformat() if parsed_date else None,
         "suggested_category": suggest_category(title),
         "raw_text": raw_text,
+    }
+
+
+@router_ocr.post(
+    "/scan-ai",
+    summary="Extract transaction details from a receipt using Gemini AI",
+    description=(
+        "Sends the uploaded receipt image or PDF to Gemini vision for intelligent extraction. "
+        "Handles handwritten Devanagari, mixed scripts, and PDFs. Requires internet. "
+        "User must review extracted fields before confirming — AI output is not auto-saved."
+        "Upload one receipt at a time — one file per request."
+    ),
+)
+async def scan_receipt_ai(
+    file: UploadFile = File(...), current_user: dict = Depends(get_current_user)
+):
+    """
+    Extract transaction fields from a receipt using Gemini vision AI.
+
+    Accepts JPG, PNG, or PDF. Returns structured fields extracted by the model —
+    title (business name + key items), amount (from total line), date (from receipt
+    or today if not found), suggested_category, and an AI-generated description.
+
+    Args:
+        file (UploadFile): The uploaded receipt image (JPG/PNG) or PDF.
+        current_user (dict): The current authenticated user.
+
+    Raises:
+        HTTPException: 400 for unsupported file types.
+        HTTPException: 422 if Gemini returns unparsable output.
+        HTTPException: 503 if the Gemini API is unreachable.
+
+    Returns:
+        dict: title, amount (float or null), date (ISO string), 
+              suggested_category, description.
+    """
+    filename = file.filename.lower()
+
+    if filename.endswith((".jpg", ".jpeg", ".png")):
+        mime_type = "image/jpeg" if not filename.endswith(".png") else "image/png"
+    elif filename.endswith(".pdf"):
+        mime_type = "application/pdf"
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file type. Use JPG, PNG, or PDF.",
+        )
+
+    file_bytes = await file.read()
+
+    prompt = """
+You are a receipt data extraction assistant for a personal finance app used in Nepal.
+
+Analyze this receipt and extract the following fields. Respond ONLY with a valid JSON object — no markdown, no explanation, no extra text.
+
+Fields to extract:
+- "title": Business name combined with the main item(s) or service(s). Example: "New Namo Buddha Tent & Catering — Stage, Sound, Screen". Keep it under 120 characters.
+- "amount": The final total amount as a number (float). Look for labels like "Total", "Grand Total", "जम्मा", "कुल". If you cannot find a clear total, return null.
+- "date": The transaction date in YYYY-MM-DD format. If no date is found on the receipt, return null.
+- "description": A one or two sentence natural language summary of what this receipt is for, written as if explaining the expense to someone.
+
+Return exactly this JSON shape:
+{
+  "title": "...",
+  "amount": 0.00,
+  "date": "YYYY-MM-DD",
+  "description": "..."
+}
+"""
+
+    try:
+        
+        response = client.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=[
+                genai_types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
+                prompt,
+            ],
+        )
+        raw = response.text.strip()
+        # Strip markdown fences if Gemini wraps output despite instructions.
+        if raw.startswith("```"):
+            raw = re.sub(r"^```[a-z]*\n?", "", raw)
+            raw = re.sub(r"\n?```$", "", raw)
+
+        extracted = json.loads(raw)
+
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=422,
+            detail="Gemini returned an unreadable response. Please try again.",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Gemini API error: {str(e)}",
+        )
+
+    # Resolve date — use receipt date if found, fall back to today.
+    receipt_date = extracted.get("date")
+    if receipt_date:
+        try:
+            datetime.strptime(receipt_date, "%Y-%m-%d")
+        except ValueError:
+            receipt_date = date.today().isoformat()
+    else:
+        receipt_date = date.today().isoformat()
+
+    title = extracted.get("title") or "Unlabeled Receipt"
+    amount_raw = extracted.get("amount")
+    amount = round(float(amount_raw), 2) if amount_raw is not None else None
+
+    return {
+        "title": title,
+        "amount": amount,
+        "date": receipt_date,
+        "suggested_category": suggest_category(title),
+        "description": extracted.get("description") or "",
     }

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import get_db
 from sqlalchemy.orm.session import Session
 from JWT_Authentication.auth import get_current_user
@@ -19,13 +19,12 @@ router_recurring = APIRouter()
 class RecurringInput(BaseModel):
     type: TransactionType
     title: str
-    amount: float
+    amount: float = Field(..., gt=0, description="Amount must be greater than zero.")
     category: str | None = None
     description: str
     frequency: Frequency
     next_due_date: date
-    is_active: bool = True  # Added so users can toggle active status via PUT
-
+    is_active: bool = True
 
 def _advance_due_date(current_due: date, frequency: Frequency) -> date:
     """

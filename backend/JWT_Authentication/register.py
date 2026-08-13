@@ -1,6 +1,7 @@
 """
 Registration page — /auth/register.
 """
+from ast import pattern
 import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
@@ -18,6 +19,7 @@ router_register = APIRouter()
 
 class RegisterInput(BaseModel):
     full_name: str = Field(..., min_length=1)
+    username: str = Field(..., min_length=3, max_length=30, pattern=r"^[a-zA-Z0-9_-]+$")
     email: EmailStr
     phone: str = Field(..., pattern=r"^\+?[0-9]{7,15}$")
     currency: str = "NPR"
@@ -78,7 +80,7 @@ def register(request: Request, payload: RegisterInput, db: Session = Depends(get
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    username = _generate_unique_username(payload.full_name, payload.email, db)
+    username = payload.username
 
     if profanity.contains_profanity(username) or profanity.contains_profanity(payload.full_name):
         raise HTTPException(
@@ -86,7 +88,7 @@ def register(request: Request, payload: RegisterInput, db: Session = Depends(get
             detail="Name contains inappropriate language. Please use a different name.",
         )
 
-    hashed = hash_password(payload.password).decode("utf-8")
+    hashed = hash_password(payload.password)
     new_user = Users(
         username=username,
         full_name=payload.full_name,

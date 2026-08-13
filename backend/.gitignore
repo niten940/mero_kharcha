@@ -1,8 +1,13 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-main1.py
 *.py[cod]
 *$py.class
+files/
+tests/
+.coverage
+mail.py
+pytest.ini
+logs/
 
 # C extensions
 *.so
