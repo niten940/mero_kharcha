@@ -135,8 +135,9 @@
 
 <script setup>
 import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import api from '../api'
 
 const emit = defineEmits(['open-settings', 'nav-change'])
 
@@ -179,35 +180,31 @@ function goToAddDream () {
 
 const yearLabel = '2083 B.S.'
 
-const goals = ref([
-  {
-    id: 1,
-    name: 'Electric Bike',
-    icon: 'electric_moped',
-    gradient: 'linear-gradient(135deg, #2f6f52, #163f2c)',
-    saved: 135000,
-    left: 45000,
-    progress: 75
-  },
-  {
-    id: 2,
-    name: 'New Laptop',
-    icon: 'laptop_mac',
-    gradient: 'linear-gradient(135deg, #6b5b3f, #3f3527)',
-    saved: 15000,
-    left: 45000,
-    progress: 25
-  },
-  {
-    id: 3,
-    name: 'Mustang Trip',
-    icon: 'terrain',
-    gradient: 'linear-gradient(135deg, #3b6d8c, #1e3c50)',
-    saved: 38000,
-    left: 22000,
-    progress: 63
+const goals = ref([])
+
+async function fetchGoals() {
+  try {
+    const response = await api.get('/goals/')
+    const goalList = Array.isArray(response.data) ? response.data : []
+
+    goals.value = goalList.map((goal, index) => ({
+      id: goal.id,
+      name: goal.title,
+      icon: ['electric_moped', 'laptop_mac', 'terrain', 'flight_takeoff', 'school'][index % 5],
+      gradient: ['linear-gradient(135deg, #2f6f52, #163f2c)', 'linear-gradient(135deg, #6b5b3f, #3f3527)', 'linear-gradient(135deg, #3b6d8c, #1e3c50)', 'linear-gradient(135deg, #336699, #1f2f46)', 'linear-gradient(135deg, #6a4c93, #2d2148)'][index % 5],
+      saved: Number(goal.current_amount || 0),
+      left: Math.max(Number(goal.goal_amount || 0) - Number(goal.current_amount || 0), 0),
+      progress: Number(goal.progress_percent || 0)
+    }))
+  } catch (error) {
+    console.warn('Could not load goals from backend:', error)
+    goals.value = []
   }
-])
+}
+
+onMounted(() => {
+  fetchGoals()
+})
 
 const featuredGoal = computed(() => goals.value[0] || null)
 const otherGoals = computed(() => goals.value.slice(1))

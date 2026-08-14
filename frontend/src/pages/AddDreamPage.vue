@@ -163,10 +163,13 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import api from '../api'
 
 const emit = defineEmits(['open-help', 'save-dream'])
 
 const router = useRouter()
+const $q = useQuasar()
 
 const saving = ref(false)
 const imageUrl = ref('')
@@ -176,7 +179,7 @@ const form = reactive({
   name: '',
   capitalRequired: null,
   category: 'real-estate',
-  year: 2083,
+  year: 2084,
   month: 'Shraw',
   day: 20
 })
@@ -241,9 +244,42 @@ function onImageSelected (event) {
 }
 
 async function onSave () {
+  if (!form.name || !form.capitalRequired || Number(form.capitalRequired) <= 0) {
+    $q.notify({ type: 'negative', message: 'Please enter a valid dream amount.' })
+    return
+  }
+
+  const targetYear = Number(form.year)
+  const targetMonth = monthOptions.indexOf(form.month) + 1
+  const targetDay = Number(form.day)
+
+  if (!targetYear || !targetMonth || !targetDay) {
+    $q.notify({ type: 'negative', message: 'Please choose a valid target date.' })
+    return
+  }
+
   saving.value = true
   try {
-    emit('save-dream', { ...form })
+    const conversionResponse = await api.post('/calendar/bs-to-ad', {
+      bs_year: targetYear,
+      bs_month: targetMonth,
+      bs_day: targetDay
+    })
+
+    const payload = {
+      title: form.name,
+      current_amount: 0,
+      goal_amount: Number(form.capitalRequired),
+      target_date: conversionResponse.data.ad_date,
+      description: `Dream category: ${form.category}`
+    }
+
+    await api.post('/goals/post/', payload)
+    $q.notify({ type: 'positive', message: 'Dream saved successfully.' })
+    router.push({ name: 'goals' })
+  } catch (error) {
+    const message = error?.response?.data?.detail || 'Could not save dream.'
+    $q.notify({ type: 'negative', message: message })
   } finally {
     saving.value = false
   }

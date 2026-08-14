@@ -45,6 +45,7 @@
             unelevated
             no-caps
             class="mk-cta"
+            :loading="loading"
             label="Send Reset Link"
             icon-right="send"
             @click="onSend"
@@ -102,13 +103,43 @@
 <script setup>
 import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue' // imports the logo component
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import api from '../api'
 
-const emit = defineEmits(['go-login', 'submit'])
+const router = useRouter()
+const $q = useQuasar()
 
 const email = ref('')
+const loading = ref(false)
 
-function onSend () {
-  emit('submit', { email: email.value })
+async function onSend () {
+  if (!email.value) {
+    $q.notify({ type: 'negative', message: 'Please enter your email address', position: 'top' })
+    return
+  }
+
+  loading.value = true
+  try {
+    await api.post('/auth/forgot-password', { email: email.value })
+
+    $q.notify({
+      type: 'positive',
+      icon: 'check_circle',
+      message: 'If an account exists with this email, a reset link has been sent.',
+      position: 'top',
+      timeout: 4000,
+    })
+
+    // brief pause to show notification, then go to login
+    setTimeout(() => router.push('/login'), 800)
+  } catch (error) {
+    console.error('Forgot Password Error:', error)
+    const msg = error.response?.data?.detail || 'Could not send reset link. Try again later.'
+    $q.notify({ type: 'negative', message: msg, position: 'top', timeout: 5000 })
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

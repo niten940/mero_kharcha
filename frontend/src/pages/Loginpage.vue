@@ -97,7 +97,7 @@ async function handleLogin() {
     params.append('password', password.value)
 
     // 2. Post to FastAPI
-    const response = await api.post('/auth_login/login', params, {
+    const response = await api.post('/auth/login', params, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       }
@@ -108,7 +108,8 @@ async function handleLogin() {
 
     if (token) {
       localStorage.setItem('token', token)
-      router.push('/dashboard') // Redirects to dashboard upon success
+      localStorage.setItem('auth_token', token)
+      router.push('/dashboard')
     } else {
       errorMessage.value = 'Login successful, but no token returned.'
     }

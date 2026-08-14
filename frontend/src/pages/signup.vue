@@ -385,10 +385,9 @@ async function onSubmit() {
   try {
     // 1. Prepare form data for backend registration
     const registrationData = {
-      username: email.value.split('@')[0], // Use email prefix as username
+      full_name: fullName.value,
       email: email.value,
       password: password.value,
-      fullName: fullName.value,
       phone: phone.value,
       currency: currency.value,
       nationality: nationality.value,
@@ -397,7 +396,7 @@ async function onSubmit() {
     }
 
     // 2. Send registration request to backend
-    const response = await api.post('/auth_login/register', registrationData)
+    const response = await api.post('/auth/register', registrationData)
 
     // 3. Check if registration was successful
     if (response.status === 201 || response.data.message) {
