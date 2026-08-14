@@ -15,6 +15,7 @@ router_goals = APIRouter()
 
 class GoalsInput(BaseModel):
     title: str
+    category: str = "other"
     current_amount: float = Field(..., ge=0, description="Current amount cannot be negative.")
     goal_amount: float = Field(..., gt=0, description="Goal amount must be greater than zero.")
     target_date: date
@@ -87,6 +88,7 @@ def calculate_goal_progress(goal: Goals, db: Session) -> dict:
     return {
         "id": goal.id,
         "title": goal.title,
+        "category": goal.category,
         "current_amount": current,
         "goal_amount": target,
         "target_date": goal.target_date,
@@ -185,13 +187,15 @@ def create_goal(
     user_id = current_user["user_id"]
 
     add_goals = Goals(
-        user_id=user_id,
-        title=goal.title,
-        current_amount=goal.current_amount,
-        goal_amount=goal.goal_amount,
-        description=goal.description,
-        target_date=goal.target_date,
+    user_id=user_id,
+    title=goal.title,
+    current_amount=goal.current_amount,
+    goal_amount=goal.goal_amount,
+    description=goal.description,
+    target_date=goal.target_date,
+    category=goal.category,      # ADD THIS
     )
+
     db.add(add_goals)
     db.commit()
     db.refresh(add_goals)
