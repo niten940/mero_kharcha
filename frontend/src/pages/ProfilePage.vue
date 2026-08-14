@@ -182,9 +182,7 @@ import BugCretorLogo from '@/components/BugCreatorLogo.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import axios from 'axios'
-
-const API_BASE_URL = 'http://localhost:8000/api/v1'
+import api from '../api'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -222,10 +220,10 @@ const navItems = [
 ]
 
 function goTologin() {
+  localStorage.removeItem('token')
   localStorage.removeItem('auth_token')
   localStorage.removeItem('user_name')
 
-  // Safely attempt Vue Router navigation, fallback to direct browser load
   if (router) {
     router.push('/login').catch(() => {
       window.location.href = '/login'
@@ -238,23 +236,20 @@ function goTologin() {
 async function fetchUserProfile() {
   isLoading.value = true
   try {
-    const localName = localStorage.getItem('user_name')
-    const token = localStorage.getItem('auth_token')
+    const response = await api.get('/profile')
+    const profile = response.data || {}
+    const fullName = profile.full_name || profile.name || profile.username || 'User'
 
-    const response = await axios.get(`${API_BASE_URL}/profile`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    })
-
-    if (response.data) {
-      user.value = {
-        name: localName || response.data.name || 'User',
-        tier: response.data.tier || 'Free Tier',
-        since: response.data.since || '2080 B.S.',
-        isPro: response.data.isPro ?? true
-      }
+    user.value = {
+      name: fullName,
+      tier: 'Free Tier',
+      since: new Date(profile.created_at || Date.now()).getFullYear() ? 'Member' : '2080 B.S.',
+      isPro: false
     }
+
+    localStorage.setItem('user_name', fullName)
   } catch (error) {
-    console.warn('Backend connection failed, falling back to local storage:', error)
+    console.warn('Backend profile unavailable, falling back to local storage:', error)
     const storedName = localStorage.getItem('user_name')
     if (storedName) {
       user.value.name = storedName
@@ -269,13 +264,7 @@ async function saveName() {
 
   isSaving.value = true
   try {
-    const token = localStorage.getItem('auth_token')
-    
-    await axios.patch(
-      `${API_BASE_URL}/profile`,
-      { name: editedName.value.trim() },
-      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-    )
+    await api.patch('/profile', { full_name: editedName.value.trim() })
 
     user.value.name = editedName.value.trim()
     localStorage.setItem('user_name', user.value.name)

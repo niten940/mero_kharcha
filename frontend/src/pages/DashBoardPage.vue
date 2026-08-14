@@ -150,7 +150,7 @@ import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import axios from 'axios'
+import api from '../api'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -160,8 +160,8 @@ const emit = defineEmits(['open-settings', 'view-all-accounts', 'add-transaction
 const isLoading = ref(true)
 const activeNav = ref('home')
 
-const todayLabel = ref('15 Shrawan 2083')
-const currentMonthLabel = ref('Bhadra')
+const todayLabel = ref('Today')
+const currentMonthLabel = ref('This month')
 const totalBalance = ref(0)
 const spendingPercent = ref(0)
 
@@ -179,39 +179,61 @@ function handleOpenSettings() {
   emit('open-settings')
 }
 
+function mapTransaction(tx, fallbackIcon = 'receipt') {
+  const amount = Number(tx.amount ?? 0)
+  return {
+    id: tx.id || Math.random(),
+    name: tx.title || tx.name || tx.description || 'Transaction',
+    date: tx.date || 'Today',
+    category: tx.category || tx.received_from || 'General',
+    amount,
+    icon: tx.icon || (amount < 0 ? 'shopping_bag' : fallbackIcon),
+    iconBg: tx.iconBg || (amount < 0 ? '#fee2e2' : '#e7f3ee'),
+    iconColor: tx.iconColor || (amount < 0 ? 'negative' : 'primary')
+  }
+}
+
 async function fetchDashboardData() {
   isLoading.value = true
 
   try {
-    const summaryPromise = axios.get('/api/v1/dashboard/summary')
-    const accountsPromise = axios.get('/api/v1/accounts')
-    const transactionsPromise = axios.get('/api/v1/transactions/recent')
-
-    const [summaryRes, accountsRes, transactionsRes] = await Promise.all([
-      summaryPromise,
-      accountsPromise,
-      transactionsPromise
+    const [budgetRes, expensesRes, incomesRes, goalsRes] = await Promise.all([
+      api.get('/budget/watchdog').catch(() => ({ data: { spending_percent: 0, total_spent: 0, monthly_limit: 0 } })),
+      api.get('/expenses/').catch(() => ({ data: [] })),
+      api.get('/incomes/').catch(() => ({ data: [] })),
+      api.get('/goals/').catch(() => ({ data: [] }))
     ])
 
-    totalBalance.value = summaryRes.data?.totalBalance ?? 0
-    spendingPercent.value = summaryRes.data?.spendingPercent ?? 0
-    todayLabel.value = summaryRes.data?.todayLabel || todayLabel.value
-    currentMonthLabel.value = summaryRes.data?.currentMonthLabel || currentMonthLabel.value
+    const expenses = Array.isArray(expensesRes.data) ? expensesRes.data : []
+    const incomes = Array.isArray(incomesRes.data) ? incomesRes.data : []
+    const goals = Array.isArray(goalsRes.data) ? goalsRes.data : []
 
-    accounts.value = Array.isArray(accountsRes.data) ? accountsRes.data : []
+    const totalExpenses = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0)
+    const totalIncomes = incomes.reduce((sum, item) => sum + Number(item.amount || 0), 0)
+    const totalGoalSavings = goals.reduce((sum, item) => sum + Number(item.current_amount || 0), 0)
 
-    const rawTx = Array.isArray(transactionsRes.data) ? transactionsRes.data : []
-    transactions.value = rawTx.map(tx => ({
-      id: tx.id || tx._id || Math.random(),
-      name: tx.name || tx.title || tx.description || 'Transaction',
-      date: tx.date || tx.created_at || 'Today',
-      category: tx.category || 'General',
-      amount: Number(tx.amount ?? tx.price ?? tx.total) || 0,
-      icon: tx.icon || (Number(tx.amount || 0) < 0 ? 'shopping_bag' : 'account_balance_wallet'),
-      iconBg: tx.iconBg || (Number(tx.amount || 0) < 0 ? '#fee2e2' : '#e7f3ee'),
-      iconColor: tx.iconColor || (Number(tx.amount || 0) < 0 ? 'negative' : 'primary')
-    }))
+    const budget = budgetRes.data || {}
+    totalBalance.value = totalIncomes - totalExpenses + totalGoalSavings
+    spendingPercent.value = Number(budget.spending_percent ?? 0)
+    todayLabel.value = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    currentMonthLabel.value = new Date().toLocaleDateString('en-US', { month: 'long' })
 
+    accounts.value = [
+      {
+        id: 1,
+        name: 'Cash & Wallet',
+        balance: totalBalance.value,
+        masked: '•••• 0001',
+        gradient: 'linear-gradient(135deg, #0f6b46, #0a4a30)'
+      }
+    ]
+
+    const rawTransactions = [...expenses, ...incomes]
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .slice(0, 8)
+      .map((tx) => mapTransaction(tx, tx.title ? 'account_balance_wallet' : 'receipt'))
+
+    transactions.value = rawTransactions
   } catch (error) {
     console.warn('Backend API connection failed, showing default state:', error)
   } finally {
