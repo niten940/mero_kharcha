@@ -112,7 +112,7 @@
       icon="add"
       color="primary"
       class="mk-fab"
-      @click="goToAddDream"
+      @click="navigateToOptionpage"
     />
 
     <!-- Bottom navigation -->
@@ -160,11 +160,13 @@ watch(
 
 // Corrected navItems array to match exact route names from router/index.js
 const navItems = [
-  { name: 'dashboard', label: 'Home', icon: 'home' },
-  { name: 'goals', label: 'Goals', icon: 'track_changes' },
-  { name: 'imports', label: 'Import', icon: 'description' },
+  { name: 'home', label: 'Home', icon: 'home' },
+  { name: 'goals', label: 'Goals', icon: 'flag' },       // Or your specific icon
+  { name: 'report', label: 'Report', icon: 'bar_chart' }, // Added between Goals & Import
+  { name: 'import', label: 'Import', icon: 'file_upload' },
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
+
 
 function setActive (routeName) {
   activeNav.value = routeName
@@ -174,8 +176,19 @@ function setActive (routeName) {
   router.push({ name: routeName })
 }
 
-function goToAddDream () {
-  router.push({ name: 'add-dream' })
+function goToAddDream() {
+  if (router) {
+    router.push('/adddream').catch(() => {
+      router.push({ name: 'adddream' }).catch(() => {})
+    })
+  }
+}
+function navigateToOptionpage() {
+  if (router) {
+    router.push('/Optionpage').catch(() => {
+      router.push({ name: 'Optionpage' }).catch(() => {})
+    })
+  }
 }
 
 const yearLabel = '2083 B.S.'

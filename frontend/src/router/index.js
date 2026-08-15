@@ -12,8 +12,13 @@ import imports from '../pages/Imports.vue'
 import profile from '../pages/ProfilePage.vue'
 import AddExpensePage from '../pages/AddExpensePage.vue'
 import LinkedAccountsView from '../pages/LinkedAccountsPage.vue'
-import AddDream from '../pages/AddDreamPage.vue' // Fixed path!
+import AddDream from '../pages/AddDreamPage.vue'
 import settings from '../pages/ProfileSetting.vue'
+import Optionpage from '../pages/OptionPage.vue'
+import Resetpass from '../pages/NewPassword.vue'
+import Setbudget from '../pages/SetBudget.vue'
+import ReceiptScanner from '../pages/ReceiptScanner.vue'
+import reports from '../pages/FinancialReport.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -82,6 +87,30 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: settings
+    },
+    {
+      path: '/Optionpage',
+      name: 'Optionpage',
+      component: Optionpage
+    },
+    {path: '/resetpass',
+      name: 'resetpass',
+      component: Resetpass
+    },
+    {
+      path: '/setbudget',
+      name: 'setbudget',
+      component: Setbudget
+    },
+    {
+      path: '/receipt-scanner',
+      name: 'receipt-scanner',
+      component: ReceiptScanner
+    },
+    {
+      path: '/reports', 
+      name: 'reports',
+      component: reports
     },
     // Catch-all fallback to Dashboard if unknown path is entered
     {
