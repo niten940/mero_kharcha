@@ -8,154 +8,176 @@
         <q-btn flat round dense icon="calendar_today" color="grey-8" @click="showMonthPicker = !showMonthPicker" />
       </div>
 
-      <!-- Total spent card -->
-      <div class="mk-total-card">
-        <div class="row items-center justify-between">
-          <div class="mk-total-label">TOTAL SPENT</div>
-          <div class="mk-change-chip" :class="{ 'mk-change-negative': changePercent < 0 }">
-            <q-icon :name="changePercent >= 0 ? 'trending_up' : 'trending_down'" size="13px" />
-            {{ changePercent >= 0 ? '+' : '' }}{{ changePercent }}% from {{ previousMonthLabel }}
-          </div>
-        </div>
-
-        <div class="mk-total-amount-row">
-          <span class="mk-rs">Rs.</span>
-          <span class="mk-total-amount">{{ wholeAmount }}</span>
-          <span class="mk-total-decimals">.{{ decimalAmount }}</span>
-        </div>
-
-        <div class="row items-center q-gutter-sm q-mt-md">
-          <q-btn
-            unelevated
-            no-caps
-            label="View Statement"
-            class="mk-view-statement-btn col"
-            @click="$emit('view-statement')"
-          />
-          <q-btn
-            round
-            unelevated
-            icon="more_horiz"
-            class="mk-more-btn"
-            @click="$emit('open-options')"
-          />
-        </div>
+      <!-- Loading State -->
+      <div v-if="loading" class="row justify-center q-my-xl">
+        <q-spinner-dots color="primary" size="40px" />
       </div>
 
-      <!-- Top merchant / busiest day -->
-      <div class="mk-stat-grid">
-        <div class="mk-stat-card">
-          <div class="mk-stat-icon mk-stat-icon-amber">
-            <q-icon name="storefront" size="20px" />
-          </div>
-          <div class="mk-stat-label">Top Merchant</div>
-          <div class="mk-stat-value">{{ topMerchant.name }}</div>
-          <div class="mk-stat-sub">{{ topMerchant.transactionCount }} transactions this month</div>
-        </div>
-
-        <div class="mk-stat-card">
-          <div class="mk-stat-icon mk-stat-icon-pink">
-            <q-icon name="wb_sunny" size="20px" />
-          </div>
-          <div class="mk-stat-label">Busiest Day</div>
-          <div class="mk-stat-value">{{ busiestDay.name }}</div>
-          <div class="mk-stat-sub">Avg. Rs. {{ formatAmount(busiestDay.avgAmount) }} per weekend</div>
-        </div>
+      <!-- Error State -->
+      <div v-else-if="errorMessage" class="q-pa-md text-negative text-center">
+        <q-icon name="error_outline" size="32px" />
+        <div class="q-mt-sm">{{ errorMessage }}</div>
+        <q-btn flat color="primary" label="Retry" class="q-mt-xs" @click="fetchReportsData" />
       </div>
 
-      <!-- Spending trend -->
-      <q-card flat class="mk-trend-card">
-        <q-card-section>
-          <div class="row items-center justify-between q-mb-md">
-            <div class="mk-section-title">Spending Trend</div>
-            <q-btn-toggle
-              v-model="trendRange"
-              dense
+      <template v-else>
+        <!-- Total spent card -->
+        <div class="mk-total-card">
+          <div class="row items-center justify-between">
+            <div class="mk-total-label">TOTAL SPENT</div>
+            <div class="mk-change-chip" :class="{ 'mk-change-negative': changePercent < 0 }">
+              <q-icon :name="changePercent >= 0 ? 'trending_up' : 'trending_down'" size="13px" />
+              {{ changePercent >= 0 ? '+' : '' }}{{ changePercent }}% from {{ previousMonthLabel }}
+            </div>
+          </div>
+
+          <div class="mk-total-amount-row">
+            <span class="mk-rs">Rs.</span>
+            <span class="mk-total-amount">{{ wholeAmount }}</span>
+            <span class="mk-total-decimals">.{{ decimalAmount }}</span>
+          </div>
+
+          <div class="row items-center q-gutter-sm q-mt-md">
+            <q-btn
+              unelevated
               no-caps
-              spread
-              toggle-color="primary"
-              color="white"
-              text-color="grey-7"
-              class="mk-range-toggle"
-              :options="[
-                { label: '5M', value: '5m' },
-                { label: '1Y', value: '1y' },
-              ]"
+              label="View Statement"
+              class="mk-view-statement-btn col"
+              @click="$emit('view-statement')"
+            />
+            <q-btn
+              round
+              unelevated
+              icon="more_horiz"
+              class="mk-more-btn"
+              @click="$emit('open-options')"
             />
           </div>
-
-          <div class="mk-bar-chart">
-            <div
-              v-for="(bar, index) in visibleTrend"
-              :key="bar.label"
-              class="mk-bar-col"
-            >
-              <div
-                v-if="index === visibleTrend.length - 1"
-                class="mk-bar-tooltip"
-              >
-                Rs. {{ formatCompact(bar.value) }}
-              </div>
-              <div
-                class="mk-bar"
-                :class="{ 'mk-bar-active': index === visibleTrend.length - 1 }"
-                :style="{ height: barHeight(bar.value) + 'px' }"
-              />
-              <div class="mk-bar-label">{{ bar.label }}</div>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <!-- BS month selector -->
-      <div class="mk-month-scroll">
-        <div
-          v-for="month in bsMonths"
-          :key="month"
-          class="mk-month-item"
-          :class="{ 'mk-month-active': selectedMonth === month }"
-          @click="selectedMonth = month"
-        >
-          {{ month }}
         </div>
-      </div>
 
-      <!-- Category breakdown -->
-      <q-card flat class="mk-category-card">
-        <q-card-section>
-          <div class="row items-center justify-between q-mb-md">
-            <div class="mk-section-title">Category Breakdown</div>
-            <div class="mk-see-all" @click="$emit('view-all-categories')">See All</div>
+        <!-- Top merchant / busiest day -->
+        <div class="mk-stat-grid">
+          <div class="mk-stat-card">
+            <div class="mk-stat-icon mk-stat-icon-amber">
+              <q-icon name="storefront" size="20px" />
+            </div>
+            <div class="mk-stat-label">Top Merchant</div>
+            <div class="mk-stat-value">{{ topMerchant.name }}</div>
+            <div class="mk-stat-sub">{{ topMerchant.transactionCount }} transactions this month</div>
           </div>
 
-          <div
-            v-for="cat in categories"
-            :key="cat.label"
-            class="mk-category-row"
-          >
-            <div class="mk-category-icon" :style="{ background: cat.bg, color: cat.color }">
-              <q-icon :name="cat.icon" size="18px" />
+          <div class="mk-stat-card">
+            <div class="mk-stat-icon mk-stat-icon-pink">
+              <q-icon name="wb_sunny" size="20px" />
             </div>
-            <div class="col mk-category-info">
-              <div class="row items-center justify-between">
-                <div class="mk-category-label">{{ cat.label }}</div>
-                <div class="mk-category-amount">Rs. {{ formatAmount(cat.amount) }}</div>
-              </div>
-              <div class="row items-center q-gutter-sm q-mt-xs">
-                <q-linear-progress
-                  :value="cat.percent / 100"
-                  size="6px"
-                  rounded
-                  track-color="grey-3"
-                  :color="cat.progressColor || 'primary'"
-                  class="mk-category-bar"
+            <div class="mk-stat-label">Busiest Day</div>
+            <div class="mk-stat-value">{{ busiestDay.name }}</div>
+            <div class="mk-stat-sub">Avg. Rs. {{ formatAmount(busiestDay.avgAmount) }} per weekend</div>
+          </div>
+        </div>
+
+        <!-- Spending trend -->
+        <q-card flat class="mk-trend-card">
+          <q-card-section>
+            <div class="row items-center justify-between q-mb-md">
+              <div class="mk-section-title">Spending Trend</div>
+              <q-btn-toggle
+                v-model="trendRange"
+                dense
+                no-caps
+                spread
+                toggle-color="primary"
+                color="white"
+                text-color="grey-7"
+                class="mk-range-toggle"
+                :options="[
+                  { label: '5M', value: '5m' },
+                  { label: '1Y', value: '1y' },
+                ]"
+              />
+            </div>
+
+            <div v-if="visibleTrend.length" class="mk-bar-chart">
+              <div
+                v-for="(bar, index) in visibleTrend"
+                :key="bar.label"
+                class="mk-bar-col"
+              >
+                <div
+                  v-if="index === visibleTrend.length - 1"
+                  class="mk-bar-tooltip"
+                >
+                  Rs. {{ formatCompact(bar.value) }}
+                </div>
+                <div
+                  class="mk-bar"
+                  :class="{ 'mk-bar-active': index === visibleTrend.length - 1 }"
+                  :style="{ height: barHeight(bar.value) + 'px' }"
                 />
-                <span class="mk-category-percent">{{ cat.percent }}%</span>
+                <div class="mk-bar-label">{{ bar.label }}</div>
               </div>
             </div>
+            <div v-else class="text-caption text-grey text-center q-pa-md">
+              No trend data available.
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- BS month selector -->
+        <div class="mk-month-scroll">
+          <div
+            v-for="month in bsMonths"
+            :key="month"
+            class="mk-month-item"
+            :class="{ 'mk-month-active': selectedMonth === month }"
+            @click="selectedMonth = month"
+          >
+            {{ month }}
           </div>
-        </q-card-section>
-      </q-card>
+        </div>
+
+        <!-- Category breakdown -->
+        <q-card flat class="mk-category-card">
+          <q-card-section>
+            <div class="row items-center justify-between q-mb-md">
+              <div class="mk-section-title">Category Breakdown</div>
+              <div class="mk-see-all" @click="$emit('view-all-categories')">See All</div>
+            </div>
+
+            <div v-if="categories.length">
+              <div
+                v-for="cat in categories"
+                :key="cat.label"
+                class="mk-category-row"
+              >
+                <div class="mk-category-icon" :style="{ background: cat.bg, color: cat.color }">
+                  <q-icon :name="cat.icon" size="18px" />
+                </div>
+                <div class="col mk-category-info">
+                  <div class="row items-center justify-between">
+                    <div class="mk-category-label">{{ cat.label }}</div>
+                    <div class="mk-category-amount">Rs. {{ formatAmount(cat.amount) }}</div>
+                  </div>
+                  <div class="row items-center q-gutter-sm q-mt-xs">
+                    <q-linear-progress
+                      :value="cat.percent / 100"
+                      size="6px"
+                      rounded
+                      track-color="grey-3"
+                      :color="cat.progressColor || 'primary'"
+                      class="mk-category-bar"
+                    />
+                    <span class="mk-category-percent">{{ cat.percent }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-caption text-grey text-center q-pa-md">
+              No category data recorded.
+            </div>
+          </q-card-section>
+        </q-card>
+      </template>
     </div>
 
     <!-- Bottom Navigation -->
@@ -179,59 +201,142 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
 
 defineEmits(['open-menu', 'view-statement', 'open-options', 'view-all-categories'])
 
-const props = defineProps({
-  totalSpent: { type: Number, default: 142500 },
-  changePercent: { type: Number, default: 12 },
-  previousMonthLabel: { type: String, default: 'Asar' },
-  topMerchant: {
-    type: Object,
-    default: () => ({ name: 'Bhat-Bhateni', transactionCount: 12 }),
-  },
-  busiestDay: {
-    type: Object,
-    default: () => ({ name: 'Saturdays', avgAmount: 8500 }),
-  },
-  trend: {
-    type: Array,
-    default: () => [
-      { label: 'Baishak', value: 62000 },
-      { label: 'Jestha', value: 48000 },
-      { label: 'Asar', value: 98000 },
-      { label: 'Shrawan', value: 105000 },
-      { label: 'Bhadra', value: 142000 },
-    ],
-  },
-  categories: {
-    type: Array,
-    default: () => [
-      { label: 'Food & Groceries', icon: 'restaurant', amount: 45000, percent: 32, bg: '#fdf0d9', color: '#c98a2e', progressColor: 'orange-6' },
-      { label: 'Rent & Utilities', icon: 'home', amount: 35000, percent: 25, bg: '#e1f0e5', color: '#0f6e56', progressColor: 'primary' },
-      { label: 'Fuel & Transport', icon: 'directions_car', amount: 15500, percent: 11, bg: '#dde7fb', color: '#3762d6', progressColor: 'blue-7' },
-      { label: 'Social & Dining', icon: 'groups', amount: 12000, percent: 8, bg: '#ece2f9', color: '#7c4fc9', progressColor: 'purple-6' },
-      { label: 'Health & Pharmacy', icon: 'health_and_safety', amount: 8000, percent: 5, bg: '#fbdfe6', color: '#d63e6a', progressColor: 'pink-6' },
-    ],
-  },
-})
+// Ensure port and route paths match your FastAPI backend exactly
+const API_BASE_URL = 'http://127.0.0.1:8000'
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token') || localStorage.getItem('access_token')
+  return {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : ''
+    }
+  }
+}
+
+// Reactive UI states
+const loading = ref(true)
+const errorMessage = ref('')
 const showMonthPicker = ref(false)
 const trendRange = ref('5m')
 
-// Same nav set and routing as DashBoardPage.vue, so the bottom bar behaves
-// identically across screens.
-const activeNav = ref('reports')
+// Data from backend
+const totalSpent = ref(0)
+const changePercent = ref(0)
+const previousMonthLabel = ref('Previous Month')
+const trend = ref([])
+const categories = ref([])
 
+// Default static metrics
+const topMerchant = ref({ name: 'Bhat-Bhateni', transactionCount: 12 })
+const busiestDay = ref({ name: 'Saturdays', avgAmount: 8500 })
+
+const bsMonths = ['Chaitra', 'Baishak', 'Jestha', 'Asar', 'Shrawan']
+const selectedMonth = ref('Shrawan')
+
+// Category mappings
+const categoryStyleMap = {
+  'Food & Groceries': { icon: 'restaurant', bg: '#fdf0d9', color: '#c98a2e', progressColor: 'orange-6' },
+  'Food': { icon: 'restaurant', bg: '#fdf0d9', color: '#c98a2e', progressColor: 'orange-6' },
+  'Rent & Utilities': { icon: 'home', bg: '#e1f0e5', color: '#0f6e56', progressColor: 'primary' },
+  'Housing': { icon: 'home', bg: '#e1f0e5', color: '#0f6e56', progressColor: 'primary' },
+  'Fuel & Transport': { icon: 'directions_car', bg: '#dde7fb', color: '#3762d6', progressColor: 'blue-7' },
+  'Transportation': { icon: 'directions_car', bg: '#dde7fb', color: '#3762d6', progressColor: 'blue-7' },
+  'Social & Dining': { icon: 'groups', bg: '#ece2f9', color: '#7c4fc9', progressColor: 'purple-6' },
+  'Entertainment': { icon: 'movie', bg: '#ece2f9', color: '#7c4fc9', progressColor: 'purple-6' },
+  'Health & Pharmacy': { icon: 'health_and_safety', bg: '#fbdfe6', color: '#d63e6a', progressColor: 'pink-6' },
+  'Medical': { icon: 'health_and_safety', bg: '#fbdfe6', color: '#d63e6a', progressColor: 'pink-6' },
+  'Default': { icon: 'category', bg: '#f0f0f0', color: '#666666', progressColor: 'grey-7' }
+}
+
+function formatMonthLabel(dateStr) {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return isNaN(date.getTime()) ? dateStr : date.toLocaleDateString('en-US', { month: 'short' })
+}
+
+async function fetchReportsData() {
+  loading.value = true
+  errorMessage.value = ''
+
+  try {
+    const authConfig = getAuthHeaders()
+
+    // Endpoints match: /reports/monthly and /reports/category
+    const [monthlyRes, categoryRes] = await Promise.all([
+      axios.get(`${API_BASE_URL}/reports/monthly`, authConfig),
+      axios.get(`${API_BASE_URL}/reports/category`, authConfig)
+    ])
+
+    // Process Monthly Trends
+    const monthlyData = monthlyRes.data || []
+    if (monthlyData.length > 0) {
+      trend.value = monthlyData.map((item) => ({
+        label: formatMonthLabel(item.month),
+        value: item.total
+      }))
+
+      const current = monthlyData[monthlyData.length - 1]
+      totalSpent.value = current.total
+
+      if (monthlyData.length >= 2) {
+        const prev = monthlyData[monthlyData.length - 2]
+        previousMonthLabel.value = formatMonthLabel(prev.month)
+        if (prev.total > 0) {
+          const diff = current.total - prev.total
+          changePercent.value = Math.round((diff / prev.total) * 100)
+        } else {
+          changePercent.value = 100
+        }
+      } else {
+        changePercent.value = 0
+        previousMonthLabel.value = 'N/A'
+      }
+    }
+
+    // Process Category Breakdown
+    const categoryData = categoryRes.data || []
+    const grandTotal = categoryData.reduce((acc, c) => acc + c.total, 0)
+
+    categories.value = categoryData.map((c) => {
+      const style = categoryStyleMap[c.category] || categoryStyleMap['Default']
+      const percent = grandTotal > 0 ? Math.round((c.total / grandTotal) * 100) : 0
+      return {
+        label: c.category,
+        amount: c.total,
+        percent: percent,
+        icon: style.icon,
+        bg: style.bg,
+        color: style.color,
+        progressColor: style.progressColor
+      }
+    })
+  } catch (error) {
+    console.error('Failed to connect to FastAPI backend:', error)
+    if (error.response?.status === 401) {
+      errorMessage.value = 'Unauthorized: Please log in again.'
+    } else {
+      errorMessage.value = 'Unable to fetch report data from server.'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// Navigation logic
+const activeNav = ref('reports')
 const navItems = [
-  { name: 'home', label: 'Home', icon: 'home' },
-  { name: 'goals', label: 'Goals', icon: 'track_changes' },
-  { name: 'import', label: 'Import', icon: 'description' },
-  { name: 'profile', label: 'Profile', icon: 'person_outline' },
-  { name: 'reports', label: 'Reports', icon: 'bar_chart' }
+  { name: 'dashboard', label: 'Home', icon: 'home' },
+  { name: 'goals', label: 'Goals', icon: 'flag' },
+  { name: 'reports', label: 'Report', icon: 'bar_chart' },
+  { name: 'imports', label: 'Import', icon: 'file_upload' },
+  { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
 function syncActiveNavFromRoute() {
@@ -245,7 +350,6 @@ function syncActiveNavFromRoute() {
 
 function setActive(name) {
   activeNav.value = name
-
   if (!router) return
   if (name === 'home') router.push('/dashboard')
   else if (name === 'goals') router.push('/goals')
@@ -254,25 +358,18 @@ function setActive(name) {
   else if (name === 'reports') router.push('/reports')
 }
 
-onMounted(() => {
-  syncActiveNavFromRoute()
-})
-
-watch(() => route.path, () => {
-  syncActiveNavFromRoute()
-})
-
-const bsMonths = ['Chaitra', 'Baishak', 'Jestha', 'Asar', 'Shrawan']
-const selectedMonth = ref('Shrawan')
-
-const wholeAmount = computed(() => Math.floor(props.totalSpent).toLocaleString('en-IN'))
+// Formatting helpers
+const wholeAmount = computed(() => Math.floor(totalSpent.value).toLocaleString('en-IN'))
 const decimalAmount = computed(() => {
-  const decimals = Math.round((props.totalSpent % 1) * 100)
+  const decimals = Math.round((totalSpent.value % 1) * 100)
   return decimals.toString().padStart(2, '0')
 })
 
 const visibleTrend = computed(() => {
-  return trendRange.value === '5m' ? props.trend : props.trend
+  if (trendRange.value === '5m') {
+    return trend.value.slice(-5)
+  }
+  return trend.value.slice(-12)
 })
 
 const maxTrendValue = computed(() => Math.max(...visibleTrend.value.map((b) => b.value), 1))
@@ -290,6 +387,15 @@ function formatCompact(value) {
   if (value >= 1000) return `${Math.round(value / 1000)}k`
   return value
 }
+
+onMounted(() => {
+  syncActiveNavFromRoute()
+  fetchReportsData()
+})
+
+watch(() => route.path, () => {
+  syncActiveNavFromRoute()
+})
 </script>
 
 <style scoped>

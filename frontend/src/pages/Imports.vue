@@ -1,15 +1,3 @@
-Here is the cleaned-up, fully functional Vue 3 component code.
-
-### What Was Fixed:
-
-1. **Duplicate `setActive` Function:** Removed the second duplicate definition that was overriding the navigation logic.
-2. **Missing Router Setup:** Added `import { useRouter } from 'vue-router'` and initialized `const router = useRouter()` so `router.push(...)` works properly without runtime errors.
-
----
-
-### Cleaned Code
-
-```vue
 <template>
   <q-page class="mk-page">
     <div class="mk-shell">
@@ -172,9 +160,10 @@ const totalExpenses = computed(() =>
 )
 
 const navItems = [
-  { name: 'home', label: 'Home', icon: 'home' },
-  { name: 'goals', label: 'Goals', icon: 'track_changes' },
-  { name: 'imports', label: 'Imports', icon: 'description' },
+  { name: 'dashboard', label: 'Home', icon: 'home' },
+  { name: 'goals', label: 'Goals', icon: 'flag' },
+  { name: 'reports', label: 'Report', icon: 'bar_chart' },
+  { name: 'imports', label: 'Import', icon: 'file_upload' },
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
@@ -190,6 +179,8 @@ function setActive (name) {
     router.push('/imports')
   } else if (name === 'profile') {
     router.push('/profile')
+  } else if (name === 'reports') {
+    router.push('/reports')
   }
 }
 

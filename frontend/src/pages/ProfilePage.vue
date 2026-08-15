@@ -311,8 +311,9 @@ const editForm = ref({
 
 const navItems = [
   { name: 'dashboard', label: 'Home', icon: 'home' },
-  { name: 'goals', label: 'Goals', icon: 'track_changes' },
-  { name: 'imports', label: 'Import', icon: 'description' },
+  { name: 'goals', label: 'Goals', icon: 'flag' },
+  { name: 'reports', label: 'Report', icon: 'bar_chart' },
+  { name: 'imports', label: 'Import', icon: 'file_upload' },
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
 
@@ -451,6 +452,7 @@ function setActive(name) {
   else if (name === 'goals') router.push('/goals')
   else if (name === 'imports') router.push('/imports')
   else if (name === 'profile') router.push('/profile')
+  else if (name === 'reports') router.push('/reports')
 }
 
 onMounted(() => {

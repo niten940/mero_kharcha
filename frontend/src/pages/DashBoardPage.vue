@@ -317,7 +317,7 @@ function goFinishScannedExpense() {
 const navItems = [
   { name: 'home', label: 'Home', icon: 'home' },
   { name: 'goals', label: 'Goals', icon: 'flag' },       // Or your specific icon
-  { name: 'report', label: 'Report', icon: 'bar_chart' }, // Added between Goals & Import
+  { name: 'reports', label: 'Report', icon: 'bar_chart' }, // Added between Goals & Import
   { name: 'import', label: 'Import', icon: 'file_upload' },
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]

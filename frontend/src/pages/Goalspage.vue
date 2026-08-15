@@ -160,14 +160,12 @@ watch(
 
 // Corrected navItems array to match exact route names from router/index.js
 const navItems = [
-  { name: 'home', label: 'Home', icon: 'home' },
-  { name: 'goals', label: 'Goals', icon: 'flag' },       // Or your specific icon
-  { name: 'report', label: 'Report', icon: 'bar_chart' }, // Added between Goals & Import
-  { name: 'import', label: 'Import', icon: 'file_upload' },
+  { name: 'dashboard', label: 'Home', icon: 'home' },
+  { name: 'goals', label: 'Goals', icon: 'flag' },
+  { name: 'reports', label: 'Report', icon: 'bar_chart' },
+  { name: 'imports', label: 'Import', icon: 'file_upload' },
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
-
-
 function setActive (routeName) {
   activeNav.value = routeName
   emit('nav-change', routeName)
@@ -178,8 +176,8 @@ function setActive (routeName) {
 
 function goToAddDream() {
   if (router) {
-    router.push('/adddream').catch(() => {
-      router.push({ name: 'adddream' }).catch(() => {})
+    router.push('/add-dream').catch(() => {
+      router.push({ name: 'add-dream' }).catch(() => {})
     })
   }
 }
