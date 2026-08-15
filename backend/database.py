@@ -10,7 +10,10 @@ dotenv_path = os.path.join(BASE_DIR, '.env')
 
 load_dotenv(dotenv_path)
 password = quote(os.getenv('DB_PASSWORD'))
-engine = create_engine(f"postgresql+psycopg://{os.getenv('DB_USER')}:{password}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}")
+engine = create_engine(f"postgresql+psycopg://{os.getenv('DB_USER')}:{password}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}",pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,   # avoids using dead connections
+    pool_recycle=300,)
 
 SessionLocal = sessionmaker(bind=engine)
 

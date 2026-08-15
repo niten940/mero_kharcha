@@ -23,5 +23,7 @@ class Users(Base):
     age = Column(Integer, nullable=False)
     gender = Column(String(20), nullable=False)
     hashed_password = Column(String(100), nullable=True)
+    image_path = Column(String(255), nullable=True)
     is_admin = Column(Boolean, nullable=False, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
+    

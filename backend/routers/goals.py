@@ -43,10 +43,13 @@ def calculate_goal_progress(goal: Goals, db: Session) -> dict:
     """
     current = float(goal.current_amount)
     target = float(goal.goal_amount)
-
+    status = goal.status
     progress_percent = round((current / target) * 100, 2) if target > 0 else 0
     remaining_amount = round(target - current, 2)
 
+    if remaining_amount == 0 or progress_percent == 100: 
+        status = "completed"
+    
     # Rolling 3-month deposit velocity: sum deposits from the last 3 calendar months,
     # divide by 3 regardless of how many of those months actually had deposits.
     three_months_ago = date.today() - timedelta(days=90)
@@ -97,6 +100,7 @@ def calculate_goal_progress(goal: Goals, db: Session) -> dict:
         "remaining_amount": remaining_amount,
         "projected_completion_date": projected_completion_date,
         "required_monthly_payment": required_monthly_payment,
+        "status": status,
     }
 
 
