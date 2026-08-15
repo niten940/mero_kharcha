@@ -1,14 +1,7 @@
-"""
-Local file storage utility — handles image uploads to local filesystem.
-Used by goals and user profile image endpoints.
-"""
-
+# routers/storage.py
 import os
 import uuid
-import shutil
-from pathlib import Path
 from fastapi import HTTPException, UploadFile
-from datetime import datetime
 
 # Configuration
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,17 +20,6 @@ MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB
 async def upload_image(file: UploadFile, folder: str) -> str:
     """
     Upload an image to local storage and return the file path.
-
-    Args:
-        file (UploadFile): The uploaded image file.
-        folder (str): 'profiles' or 'goals'
-
-    Returns:
-        str: The relative path to the uploaded file.
-
-    Raises:
-        HTTPException: 400 if file type is not allowed or file exceeds 2 MB.
-        HTTPException: 500 if file upload fails.
     """
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
@@ -75,46 +57,38 @@ async def upload_image(file: UploadFile, folder: str) -> str:
             detail=f"Failed to save image: {str(e)}"
         )
     
-    # Return the relative path for database storage
-    relative_path = f"uploads/{folder}/{unique_filename}"
+    relative_path = f"{folder}/{unique_filename}"
     return relative_path
 
 
 def delete_image(image_path: str) -> None:
     """
     Delete an image from local storage.
-
-    Args:
-        image_path (str): The relative path to the image file.
     """
     if not image_path:
         return
     
     try:
-        # Ensure we're deleting from the correct location
         if image_path.startswith("uploads/"):
             full_path = os.path.join(BASE_DIR, image_path)
         else:
-            full_path = os.path.join(BASE_DIR, "uploads", image_path)
+            full_path = os.path.join(UPLOAD_DIR, image_path)
         
         if os.path.exists(full_path):
             os.remove(full_path)
     except Exception:
-        pass  # Silently fail if file doesn't exist
-
+        pass  
 
 def get_image_url(image_path: str) -> str:
     """
     Get the full URL for an image.
-
-    Args:
-        image_path (str): The relative path to the image.
-
-    Returns:
-        str: The full URL to access the image.
     """
     if not image_path:
         return None
     
-    # Return the path for the static file serving endpoint
-    return f"/static/{image_path}"
+    # Remove 'uploads/' prefix if it exists
+    clean_path = image_path
+    if clean_path.startswith("uploads/"):
+        clean_path = clean_path[8:]  # Remove 'uploads/'
+    
+    return f"/static/{clean_path}"
