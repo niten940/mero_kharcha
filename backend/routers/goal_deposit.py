@@ -124,6 +124,16 @@ def create_goal_deposit(
             detail=f"Goal id {goalDeposit.goal_id} not found for this user.",
         )
 
+    current = float(goal_record.current_amount)
+    target = float(goal_record.goal_amount)
+    remaining_amount = round(target - current, 2)
+
+    if remaining_amount < goalDeposit.amount:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Deposit amount {goalDeposit.amount} exceeds remaining balance {remaining_amount}.",
+        )
+
     add_goal_deposit = Goal_Deposit(
         user_id=user_id,
         goal_id=goalDeposit.goal_id,

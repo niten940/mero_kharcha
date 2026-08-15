@@ -14,5 +14,6 @@ class Goals(Base):
     goal_amount = Column(Numeric(10, 2), nullable=False)
     description = Column(Text)
     target_date = Column(Date, nullable=False)
-    image_url = Column(String(255), nullable=True)
+    image_path = Column(String(255), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
+    status = Column(String(20), nullable=False, server_default="active")  # active, completed
