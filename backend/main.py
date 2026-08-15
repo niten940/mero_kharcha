@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -17,6 +18,9 @@ app = FastAPI(
     version="1.0.0",
     description="Personal expense tracking system API",
 )
+
+# After app initialization
+app.mount("/routers", StaticFiles(directory="uploads"), name="static")
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -53,6 +57,8 @@ app.include_router(opportunity_cost.router_opportunity_cost, prefix="/opportunit
 app.include_router(calendar_bs.router_calendar_bs, prefix="/calendar", tags=["Bikram Sambat Calendar"])
 app.include_router(ocr_receipt.router_ocr, prefix="/ocr", tags=["OCR Receipt Scanning"])
 app.include_router(admin.router_admin, prefix="/admin", tags=["Admin"])
+
+
 
 @app.get("/")
 def read_root():

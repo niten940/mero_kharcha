@@ -201,24 +201,12 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import axios from 'axios'
+import api from '../api'
 
 const router = useRouter()
 const route = useRoute()
 
 defineEmits(['open-menu', 'view-statement', 'open-options', 'view-all-categories'])
-
-// Ensure port and route paths match your FastAPI backend exactly
-const API_BASE_URL = 'http://127.0.0.1:8000'
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token') || localStorage.getItem('access_token')
-  return {
-    headers: {
-      Authorization: token ? `Bearer ${token}` : ''
-    }
-  }
-}
 
 // Reactive UI states
 const loading = ref(true)
@@ -239,6 +227,13 @@ const busiestDay = ref({ name: 'Saturdays', avgAmount: 8500 })
 
 const bsMonths = ['Chaitra', 'Baishak', 'Jestha', 'Asar', 'Shrawan']
 const selectedMonth = ref('Shrawan')
+// NOTE: this selector is currently cosmetic only. /reports/category has no
+// month filter on the backend, so it always returns all-time totals per
+// category regardless of which BS month is selected here. Wire this up by
+// adding a `month` (or date-range) query param to that endpoint, and pass
+// selectedMonth through on fetchReportsData() if you want it to actually
+// filter — otherwise consider removing the selector so it doesn't imply
+// functionality that isn't there yet.
 
 // Category mappings
 const categoryStyleMap = {
@@ -266,12 +261,13 @@ async function fetchReportsData() {
   errorMessage.value = ''
 
   try {
-    const authConfig = getAuthHeaders()
-
-    // Endpoints match: /reports/monthly and /reports/category
+    // Uses the shared `api` instance (same base URL + auth handling as every
+    // other page) instead of a separate hardcoded axios client, so this
+    // works the same in dev and production and picks up whatever auth token
+    // your app actually stores.
     const [monthlyRes, categoryRes] = await Promise.all([
-      axios.get(`${API_BASE_URL}/reports/monthly`, authConfig),
-      axios.get(`${API_BASE_URL}/reports/category`, authConfig)
+      api.get('/reports/monthly'),
+      api.get('/reports/category')
     ])
 
     // Process Monthly Trends
@@ -318,7 +314,7 @@ async function fetchReportsData() {
       }
     })
   } catch (error) {
-    console.error('Failed to connect to FastAPI backend:', error)
+    console.error('Failed to fetch reports data:', error)
     if (error.response?.status === 401) {
       errorMessage.value = 'Unauthorized: Please log in again.'
     } else {
@@ -329,21 +325,23 @@ async function fetchReportsData() {
   }
 }
 
-// Navigation logic
+// Navigation logic — names match navItems exactly (dashboard/goals/reports/
+// imports/profile), consistent with DashBoardPage.vue, GoalsPage.vue,
+// ImportsPage.vue, and ProfilePage.vue.
 const activeNav = ref('reports')
 const navItems = [
   { name: 'dashboard', label: 'Home', icon: 'home' },
-  { name: 'goals', label: 'Goals', icon: 'flag' },
-  { name: 'reports', label: 'Report', icon: 'bar_chart' },
-  { name: 'imports', label: 'Import', icon: 'file_upload' },
-  { name: 'profile', label: 'Profile', icon: 'person_outline' }
+  { name: 'goals', label: 'Goals', icon: 'track_changes' },
+  { name: 'imports', label: 'Import', icon: 'description' },
+  { name: 'profile', label: 'Profile', icon: 'person_outline' },
+  { name: 'reports', label: 'Reports', icon: 'bar_chart' }
 ]
 
 function syncActiveNavFromRoute() {
   const path = route.path
-  if (path.startsWith('/dashboard')) activeNav.value = 'home'
+  if (path.startsWith('/dashboard')) activeNav.value = 'dashboard'
   else if (path.startsWith('/goals')) activeNav.value = 'goals'
-  else if (path.startsWith('/import')) activeNav.value = 'import'
+  else if (path.startsWith('/import')) activeNav.value = 'imports'
   else if (path.startsWith('/profile')) activeNav.value = 'profile'
   else if (path.startsWith('/reports')) activeNav.value = 'reports'
 }
@@ -351,9 +349,9 @@ function syncActiveNavFromRoute() {
 function setActive(name) {
   activeNav.value = name
   if (!router) return
-  if (name === 'home') router.push('/dashboard')
+  if (name === 'dashboard') router.push('/dashboard')
   else if (name === 'goals') router.push('/goals')
-  else if (name === 'import' || name === 'imports') router.push('/imports')
+  else if (name === 'imports') router.push('/imports')
   else if (name === 'profile') router.push('/profile')
   else if (name === 'reports') router.push('/reports')
 }
