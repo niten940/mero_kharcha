@@ -1,4 +1,5 @@
 import uvicorn
+import os
 from fastapi import FastAPI
 from routers import (expenses, incomes, reports, goals, recurring, budget, import_statement, goal_deposit, behavior, opportunity_cost, calendar_bs, admin, ocr_receipt, financial_health, images)
 from JWT_Authentication import auth, profile_updates
@@ -16,8 +17,8 @@ app = FastAPI(
     description="Personal expense tracking system. Manage expenses, incomes, budgets, and category-wise reports. Built with FastAPI and PostgreSQL.",
 )
 
-# After app initialization
-app.mount("/routers", StaticFiles(directory="uploads"), name="static")
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
