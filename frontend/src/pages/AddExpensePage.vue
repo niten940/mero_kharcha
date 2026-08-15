@@ -7,7 +7,7 @@
         <q-btn round flat dense icon="arrow_back" color="primary" class="mk-icon-btn" @click="goBack" />
         <MeroKharchaLogo :size="10" />
         <div class="mk-page-title">Add Expense</div>
-        <q-btn round flat dense icon="settings" color="grey-8" @click="$emit('open-settings')" />
+        <!-- <q-btn round flat dense icon="settings" color="grey-8" @click="$emit('open-settings')" /> -->
       </div>
 
       <!-- Amount -->
@@ -66,13 +66,71 @@
             text-color="grey-7"
             class="mk-toggle"
             :options="[
-              { label: 'B.S.', value: 'bs' },
-              { label: 'A.D.', value: 'ad' }
+              { label: 'A.D.', value: 'ad' },
+              { label: 'B.S.', value: 'bs' }
             ]"
           />
-          <div class="mk-change-link" @click="$emit('change-date')">Change</div>
+          <div class="mk-change-link" @click="showDatePicker = true">Change</div>
         </div>
       </div>
+
+      <!-- Date Picker Dialog -->
+      <q-dialog v-model="showDatePicker" position="bottom">
+        <q-card class="date-picker-card">
+          <q-card-section class="row items-center justify-between q-pb-none">
+            <div class="text-subtitle2 text-weight-bold">
+              Select {{ calendarMode === 'ad' ? 'A.D.' : 'B.S.' }} Date
+            </div>
+            <q-btn icon="close" flat round dense @click="showDatePicker = false" />
+          </q-card-section>
+
+          <q-card-section v-if="calendarMode === 'ad'" class="q-pt-md">
+            <q-input
+              v-model="adDate"
+              type="date"
+              outlined
+              dense
+              @update:model-value="convertADToBS"
+            />
+          </q-card-section>
+
+          <q-card-section v-else class="q-pt-md">
+            <div class="row q-gutter-md">
+              <q-input
+                v-model.number="bsDate.year"
+                label="Year"
+                type="number"
+                outlined
+                dense
+                style="flex: 1"
+                @update:model-value="convertBSToAD(bsDate.year, bsDate.month, bsDate.day)"
+              />
+              <q-input
+                v-model.number="bsDate.month"
+                label="Month"
+                type="number"
+                outlined
+                dense
+                style="flex: 1"
+                @update:model-value="convertBSToAD(bsDate.year, bsDate.month, bsDate.day)"
+              />
+              <q-input
+                v-model.number="bsDate.day"
+                label="Day"
+                type="number"
+                outlined
+                dense
+                style="flex: 1"
+                @update:model-value="convertBSToAD(bsDate.year, bsDate.month, bsDate.day)"
+              />
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat label="Done" color="primary" @click="showDatePicker = false" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
 
       <!-- Paid via -->
       <div class="mk-section-label">PAID VIA</div>
@@ -96,14 +154,21 @@
       </div>
 
       <!-- Notes -->
-      <div class="mk-section-label">NOTES</div>
+      <div class="mk-section-label">DESCRIPTION</div>
       <q-input
-        v-model="form.notes"
+        v-model="form.title"
+        outlined
+        dense
+        placeholder="What was this for? (e.g. Lunch with team)"
+        class="mk-title-field q-mb-md"
+      />
+      <q-input
+        v-model="form.description"
         type="textarea"
         outlined
         dense
         rows="3"
-        placeholder="What was this for? (e.g. Lunch with team)"
+        placeholder="Additional notes (optional)"
         class="mk-notes-field"
       />
 
@@ -140,27 +205,51 @@
 
 <script setup>
 import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import api from '../api'
 
 const emit = defineEmits(['open-settings', 'change-date', 'save-expense', 'nav-change'])
 
 const router = useRouter()
+const $q = useQuasar()
 
 const saving = ref(false)
-const calendarMode = ref('bs')
+const calendarMode = ref('ad')
 const activeNav = ref('')
+const loadingDate = ref(false)
+const showDatePicker = ref(false)
 
-const form = reactive({
-  amount: '',
-  category: 'food',
-  date: '2083 Shrawan 15',
-  paidVia: 'nabil-bank',
-  notes: ''
+// Store both AD and BS dates
+const adDate = ref(new Date().toISOString().split('T')[0])
+const bsDate = reactive({
+  year: 2083,
+  month: 1,
+  day: 1,
+  label: '2083-01-01'
 })
 
-const displayDate = computed(() => form.date)
-const displayDateSub = computed(() => 'Wednesday, Jul 22, 2026')
+const form = reactive({
+  title: '',
+  description: '',
+  amount: '',
+  category: 'food',
+  paidVia: 'nabil-bank'
+})
+
+const displayDate = computed(() => {
+  if (calendarMode.value === 'ad') {
+    return adDate.value
+  } else {
+    return bsDate.label
+  }
+})
+
+const displayDateSub = computed(() => {
+  const date = new Date(adDate.value)
+  return date.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+})
 
 const categories = [
   { id: 'food', label: 'Food', icon: 'restaurant' },
@@ -176,13 +265,116 @@ const paymentMethods = [
   { id: 'cash', label: 'Cash', icon: 'payments' }
 ]
 
-// Updated Navigation Items (Matching Dashboard)
 const navItems = [
   { name: 'home', label: 'Home', icon: 'home' },
   { name: 'goals', label: 'Goals', icon: 'track_changes' },
   { name: 'import', label: 'Import', icon: 'description' },
   { name: 'profile', label: 'Profile', icon: 'person_outline' }
 ]
+
+// Convert AD to BS
+async function convertADToBS(ad_date_str) {
+  try {
+    loadingDate.value = true
+    const response = await api.post('/calendar/ad-to-bs', {
+      ad_date: ad_date_str
+    })
+    
+    const data = response.data
+    bsDate.year = data.bs_year
+    bsDate.month = data.bs_month
+    bsDate.day = data.bs_day
+    bsDate.label = data.bs_label
+  } catch (error) {
+    console.error('Failed to convert AD to BS:', error)
+  } finally {
+    loadingDate.value = false
+  }
+}
+
+// Convert BS to AD
+async function convertBSToAD(bs_year, bs_month, bs_day) {
+  try {
+    loadingDate.value = true
+    const response = await api.post('/calendar/bs-to-ad', {
+      bs_year,
+      bs_month,
+      bs_day
+    })
+    
+    adDate.value = response.data.ad_date
+  } catch (error) {
+    console.error('Failed to convert BS to AD:', error)
+  } finally {
+    loadingDate.value = false
+  }
+}
+
+// Watch for calendar mode changes
+watch(calendarMode, (newMode, oldMode) => {
+  // If switching to BS and haven't converted yet
+  if (newMode === 'bs' && (bsDate.year === 2083 && bsDate.month === 1 && bsDate.day === 1)) {
+    convertADToBS(adDate.value)
+  }
+})
+
+// Initialize with today's date in both formats
+onMounted(async () => {
+  try {
+    const response = await api.get('/calendar/today')
+    const data = response.data
+    
+    adDate.value = data.ad_date
+    bsDate.year = data.bs_year
+    bsDate.month = data.bs_month
+    bsDate.day = data.bs_day
+    bsDate.label = data.bs_label
+  } catch (error) {
+    console.error('Failed to fetch today date:', error)
+    // Fallback: convert current date
+    await convertADToBS(adDate.value)
+  }
+
+  // Check if there's scanned receipt data to pre-fill
+  const scannedDataJson = localStorage.getItem('scannedReceiptData')
+  if (scannedDataJson) {
+    try {
+      const scannedData = JSON.parse(scannedDataJson)
+      
+      // Pre-fill form with scanned data
+      form.title = scannedData.title || ''
+      form.amount = scannedData.amount || ''
+      form.description = scannedData.description || ''
+      
+      // Set category from suggestion
+      if (scannedData.suggested_category) {
+        const categoryId = scannedData.suggested_category.toLowerCase()
+        if (categories.find(c => c.id === categoryId)) {
+          form.category = categoryId
+        }
+      }
+      
+      // Set date from receipt if available
+      if (scannedData.date) {
+        adDate.value = scannedData.date
+        await convertADToBS(scannedData.date)
+      }
+      
+      // Clear the stored data so it doesn't persist
+      localStorage.removeItem('scannedReceiptData')
+      
+      // Notify user that data was pre-filled
+      $q.notify({
+        type: 'info',
+        message: 'Receipt data pre-filled. Please review before saving.',
+        position: 'bottom'
+      })
+    } catch (error) {
+      console.error('Failed to parse scanned receipt data:', error)
+      localStorage.removeItem('scannedReceiptData')
+    }
+  }
+})
 
 function setActive (name) {
   activeNav.value = name
@@ -204,11 +396,57 @@ function goBack () {
 }
 
 async function onSave () {
+  if (!form.title.trim()) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter a description',
+      position: 'bottom'
+    })
+    return
+  }
+
+  if (!form.amount || Number(form.amount) <= 0) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter a valid amount',
+      position: 'bottom'
+    })
+    return
+  }
+
   saving.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 0))
-    emit('save-expense', { ...form })
+    const expenseData = {
+      title: form.title.trim(),
+      description: form.description.trim(),
+      amount: Number(form.amount),
+      category: form.category,
+      date: adDate.value
+    }
+
+    await api.post('/expenses/post/', expenseData)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Expense saved successfully!',
+      position: 'bottom'
+    })
+
+    form.title = ''
+    form.description = ''
+    form.amount = ''
+    form.category = 'food'
+    form.paidVia = 'nabil-bank'
+
+    emit('save-expense', expenseData)
     router.push('/dashboard')
+  } catch (error) {
+    console.error('Failed to save expense:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.detail || 'Failed to save expense',
+      position: 'bottom'
+    })
   } finally {
     saving.value = false
   }
@@ -412,12 +650,26 @@ async function onSave () {
   font-weight: 700;
 }
 
+.mk-title-field {
+  margin-bottom: 12px;
+}
+
+.mk-title-field :deep(.q-field__control) {
+  border-radius: 12px;
+}
+
 .mk-notes-field {
   margin-bottom: 20px;
 }
 
 .mk-notes-field :deep(.q-field__control) {
   border-radius: 12px;
+}
+
+.date-picker-card {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px 16px 0 0;
 }
 
 .mk-cta {

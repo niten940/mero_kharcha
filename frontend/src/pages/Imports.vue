@@ -111,9 +111,10 @@ Here is the cleaned-up, fully functional Vue 3 component code.
         unelevated
         no-caps
         class="mk-cta"
+        :loading="confirming"
         icon="check_circle"
         label="Confirm Ingestion"
-        @click="$emit('confirm-ingestion', parsedTransactions)"
+        @click="confirmIngestion"
       />
       <q-btn
         outline
@@ -121,7 +122,7 @@ Here is the cleaned-up, fully functional Vue 3 component code.
         class="mk-secondary-btn"
         icon="restart_alt"
         label="Reset Parser"
-        @click="$emit('reset-parser')"
+        @click="resetParser"
       />
     </div>
 
@@ -147,6 +148,8 @@ Here is the cleaned-up, fully functional Vue 3 component code.
 import MeroKharchaLogo from '@/components/MeroKharchaLogo.vue'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import api from '../api'
 
 const emit = defineEmits(['open-settings', 'confirm-ingestion', 'reset-parser', 'files-dropped', 'nav-change'])
 const router = useRouter()
@@ -155,53 +158,12 @@ const activeNav = ref('import')
 const isDragging = ref(false)
 const calendarMode = ref('bs')
 const fileInput = ref(null)
+const $q = useQuasar()
 
-const parsedTransactions = ref([
-  {
-    id: 1,
-    date: '2080-04-12',
-    dateLabel: 'Shrawan',
-    name: 'Bhat-Bhateni Supermarket',
-    category: 'Food & Groceries',
-    amount: -4250,
-    icon: 'restaurant',
-    iconBg: '#e7f3ee',
-    iconColor: 'primary'
-  },
-  {
-    id: 2,
-    date: '2080-04-10',
-    dateLabel: 'Shrawan',
-    name: 'Rent Payment - Kathmandu',
-    category: 'Rent',
-    amount: -25000,
-    icon: 'home',
-    iconBg: '#e7f3ee',
-    iconColor: 'primary'
-  },
-  {
-    id: 3,
-    date: '2080-04-05',
-    dateLabel: 'Shrawan',
-    name: 'Sajha Petrol Pump',
-    category: 'Fuel',
-    amount: -1800,
-    icon: 'local_gas_station',
-    iconBg: '#e7f3ee',
-    iconColor: 'primary'
-  },
-  {
-    id: 4,
-    date: '2080-04-01',
-    dateLabel: 'Shrawan',
-    name: 'Salary Credit',
-    category: 'Income',
-    amount: 85000,
-    icon: 'payments',
-    iconBg: '#e7f3ee',
-    iconColor: 'primary'
-  }
-])
+const parsing = ref(false)
+const confirming = ref(false)
+
+const parsedTransactions = ref([])
 
 const totalExpenses = computed(() =>
   parsedTransactions.value
@@ -237,17 +199,105 @@ function triggerBrowse () {
 
 function onFileSelected (event) {
   const files = Array.from(event.target.files || [])
-  if (files.length) emit('files-dropped', files)
+  if (files.length) {
+    emit('files-dropped', files)
+    parseUploadedFiles(files)
+  }
 }
 
 function onDrop (event) {
   isDragging.value = false
   const files = Array.from(event.dataTransfer?.files || [])
-  if (files.length) emit('files-dropped', files)
+  if (files.length) {
+    emit('files-dropped', files)
+    parseUploadedFiles(files)
+  }
+}
+
+async function parseUploadedFiles (files) {
+  const file = files[0]
+  if (!file) return
+
+  const allowed = ['.csv', '.xlsx', '.xls', '.pdf']
+  const lower = file.name.toLowerCase()
+  if (!allowed.some(ext => lower.endsWith(ext))) {
+    $q.notify({ type: 'negative', message: 'Unsupported file type. Use CSV, XLSX, XLS, or PDF.' })
+    return
+  }
+
+  parsing.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+
+    const resp = await api.post('/imports/parse', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    // backend returns list of parsed transactions
+    parsedTransactions.value = resp.data.map((t, idx) => ({
+      id: idx + 1,
+      date: t.date,
+      dateLabel: t.date, // frontend may format later
+      name: t.title || t.name || '',
+      category: t.category || 'Uncategorized',
+      amount: t.amount,
+      icon: 'receipt_long',
+      iconBg: '#e7f3ee',
+      iconColor: 'primary',
+      description: t.description || ''
+    }))
+
+    $q.notify({ type: 'positive', message: `Parsed ${parsedTransactions.value.length} transactions.`, timeout: 3000 })
+  } catch (err) {
+    console.error('Parse Error:', err)
+    const msg = err.response?.data?.detail || 'Could not parse file. Check format.'
+    $q.notify({ type: 'negative', message: msg })
+  } finally {
+    parsing.value = false
+  }
+}
+
+async function confirmIngestion () {
+  if (!parsedTransactions.value.length) {
+    $q.notify({ type: 'negative', message: 'No parsed transactions to ingest.' })
+    return
+  }
+
+  confirming.value = true
+  try {
+    // map to backend model
+    const payload = {
+      transactions: parsedTransactions.value.map(t => ({
+        date: t.date,
+        title: t.name,
+        category: t.category,
+        description: t.description || t.name,
+        amount: t.amount
+      }))
+    }
+
+    const resp = await api.post('/imports/confirm', payload)
+
+    $q.notify({ type: 'positive', message: resp.data.message || 'Ingestion complete', timeout: 4000 })
+    // clear parsed data
+    parsedTransactions.value = []
+  } catch (err) {
+    console.error('Confirm Error:', err)
+    const msg = err.response?.data?.detail || 'Could not ingest transactions.'
+    $q.notify({ type: 'negative', message: msg })
+  } finally {
+    confirming.value = false
+  }
 }
 
 function formatAmount (value) {
   return Number(Math.abs(value)).toLocaleString('en-IN', { minimumFractionDigits: 2 })
+}
+
+function resetParser () {
+  parsedTransactions.value = []
+  $q.notify({ type: 'info', message: 'Parser reset.' })
 }
 </script>
 
