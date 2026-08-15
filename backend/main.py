@@ -1,4 +1,5 @@
 import uvicorn
+import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,8 +20,8 @@ app = FastAPI(
     description="Personal expense tracking system API",
 )
 
-# After app initialization
-app.mount("/routers", StaticFiles(directory="uploads"), name="static")
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
