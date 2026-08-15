@@ -7,6 +7,7 @@ from rate_limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from JWT_Authentication import register, login, forgot_password, token_refresh
+from fastapi.staticfiles import StaticFiles
 
 
 app = FastAPI(
@@ -14,6 +15,9 @@ app = FastAPI(
     version="1.0.0",
     description="Personal expense tracking system. Manage expenses, incomes, budgets, and category-wise reports. Built with FastAPI and PostgreSQL.",
 )
+
+# After app initialization
+app.mount("/routers", StaticFiles(directory="uploads"), name="static")
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -57,6 +61,8 @@ app.include_router(calendar_bs.router_calendar_bs, prefix="/calendar", tags=["Bi
 #Additional Functionality routes
 app.include_router(ocr_receipt.router_ocr, prefix="/ocr", tags=["OCR Receipt Scanning"])
 app.include_router(admin.router_admin, prefix="/admin", tags=["Admin"])
+
+
 
 @app.get("/")
 def read_root():
