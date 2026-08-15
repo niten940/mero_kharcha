@@ -19,6 +19,18 @@ from routers.email_notifications import send_profile_update_email
 router_profile = APIRouter()
 
 
+class ProfileResponse(BaseModel):
+    username: str
+    full_name: str
+    email: str
+    phone: Optional[str] = None
+    nationality: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    currency: Optional[str] = None
+    created_at: str
+
+
 class ProfileUpdateInput(BaseModel):
     full_name: Optional[str] = Field(None, min_length=1)
     phone: Optional[str] = Field(None, pattern=r"^\+?[0-9]{7,15}$")
@@ -150,4 +162,43 @@ def update_profile(
         "age": user.age,
         "gender": user.gender,
         "currency": user.currency,
+    }
+
+
+@router_profile.get(
+    "/profile",
+    summary="Get user profile",
+    description="Retrieves the authenticated user's profile information.",
+)
+def get_profile(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve the authenticated user's profile.
+
+    Args:
+        current_user (dict): The current authenticated user.
+        db (Session): The database session.
+
+    Raises:
+        HTTPException: 404 if the user record cannot be found.
+
+    Returns:
+        dict: The user's profile information.
+    """
+    user = db.query(Users).filter(Users.id == current_user["user_id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    return {
+        "username": user.username,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+        "nationality": user.nationality,
+        "age": user.age,
+        "gender": user.gender,
+        "currency": user.currency,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
     }
