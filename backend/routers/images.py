@@ -1,6 +1,6 @@
 """
 Image upload endpoints for Goals and User Profile.
-Uses Supabase Storage via the shared storage.py utility.
+Uses local file storage via the shared storage.py utility.
 
 Endpoints:
   POST   /images/goals/{goal_id}    — upload or replace goal image
@@ -16,7 +16,7 @@ from database import get_db
 from JWT_Authentication.auth import get_current_user
 from sql_Alchemy_db_model.goals_model import Goals
 from sql_Alchemy_db_model.user_models import Users
-from routers.storage import upload_image, delete_image
+from routers.storage import upload_image, delete_image, get_image_url
 
 router_images = APIRouter()
 
@@ -31,7 +31,7 @@ router_images = APIRouter()
     description=(
         "Uploads a JPG, PNG, or WebP image for a specific goal. "
         "If the goal already has an image, the old one is deleted from storage first. "
-        "Returns the public URL of the uploaded image."
+        "Returns the URL of the uploaded image."
     ),
 )
 async def upload_goal_image(
@@ -52,10 +52,10 @@ async def upload_goal_image(
     Raises:
         HTTPException: 404 if the goal does not exist or belong to the user.
         HTTPException: 400 for invalid file type or size.
-        HTTPException: 503 if Supabase upload fails.
+        HTTPException: 500 if file upload fails.
 
     Returns:
-        dict: The goal_id and new public image_url.
+        dict: The goal_id and new image URL.
     """
     goal = (
         db.query(Goals)
@@ -69,18 +69,20 @@ async def upload_goal_image(
     if goal.image_path:
         delete_image(goal.image_path)
 
-    public_url = await upload_image(file, folder="goals")
-
-    goal.image_path = public_url
+    relative_path = await upload_image(file, folder="goals")
+    goal.image_path = relative_path
     db.commit()
 
-    return {"goal_id": goal_id, "image_url": public_url}
+    return {
+        "goal_id": goal_id,
+        "image_url": get_image_url(relative_path)
+    }
 
 
 @router_images.delete(
     "/goals/{goal_id}",
     summary="Remove a goal image",
-    description="Deletes the image associated with a goal from Supabase Storage and clears the image_path field.",
+    description="Deletes the image associated with a goal from local storage and clears the image_path field.",
 )
 def delete_goal_image(
     goal_id: int,
@@ -147,10 +149,10 @@ async def upload_profile_image(
     Raises:
         HTTPException: 404 if the user record is not found.
         HTTPException: 400 for invalid file type or size.
-        HTTPException: 503 if Supabase upload fails.
+        HTTPException: 500 if file upload fails.
 
     Returns:
-        dict: The new public image_url.
+        dict: The new image URL.
     """
     user = db.query(Users).filter(Users.id == current_user["user_id"]).first()
     if not user:
@@ -159,18 +161,17 @@ async def upload_profile_image(
     if user.image_path:
         delete_image(user.image_path)
 
-    public_url = await upload_image(file, folder="profiles")
-
-    user.image_path = public_url
+    relative_path = await upload_image(file, folder="profiles")
+    user.image_path = relative_path
     db.commit()
 
-    return {"image_url": public_url}
+    return {"image_url": get_image_url(relative_path)}
 
 
 @router_images.delete(
     "/profile",
     summary="Remove profile image",
-    description="Deletes the authenticated user's profile photo from Supabase Storage.",
+    description="Deletes the authenticated user's profile photo from local storage.",
 )
 def delete_profile_image(
     current_user: dict = Depends(get_current_user),

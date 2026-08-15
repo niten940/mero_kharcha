@@ -165,7 +165,7 @@ def send_password_reset_email(
     Returns:
         None
     """
-    reset_link = f"http://localhost:3000/auth/reset-password?token={reset_token}"
+    reset_link = f"http://localhost:5173/Resetpass?token={reset_token}"
     subject = "🔑 Mero Kharcha — Password Reset Request"
     body_html = f"""
     <html>

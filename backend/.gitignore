@@ -8,6 +8,7 @@ tests/
 mail.py
 pytest.ini
 logs/
+uploads/
 
 # C extensions
 *.so

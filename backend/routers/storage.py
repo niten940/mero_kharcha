@@ -1,135 +1,120 @@
 """
-Supabase Storage utility — reusable upload/delete for any entity type.
-Handles image uploads to Supabase Storage and returns the public URL.
+Local file storage utility — handles image uploads to local filesystem.
 Used by goals and user profile image endpoints.
 """
 
 import os
 import uuid
+import shutil
+from pathlib import Path
 from fastapi import HTTPException, UploadFile
-from supabase import create_client, Client
-from dotenv import load_dotenv
+from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(BASE_DIR, "..", ".env"))
+# Configuration
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+PROFILE_DIR = os.path.join(UPLOAD_DIR, "profiles")
+GOALS_DIR = os.path.join(UPLOAD_DIR, "goals")
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
+# Create directories if they don't exist
+os.makedirs(PROFILE_DIR, exist_ok=True)
+os.makedirs(GOALS_DIR, exist_ok=True)
 
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
-MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB — matches bucket limit
-
-
-def get_supabase_client() -> Client:
-    """
-    Create and return a Supabase client using credentials from .env.
-
-    Returns:
-        Client: Authenticated Supabase client instance.
-    """
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB
 
 
 async def upload_image(file: UploadFile, folder: str) -> str:
     """
-    Upload an image file to Supabase Storage and return its public URL.
-
-    Validates file type and size before uploading. Generates a UUID-based
-    filename to avoid collisions. Folder parameter allows reuse across
-    different entity types (e.g. 'goals', 'profiles').
+    Upload an image to local storage and return the file path.
 
     Args:
-        file (UploadFile): The uploaded image file from the request.
-        folder (str): Subfolder inside the bucket — e.g. 'goals' or 'profiles'.
+        file (UploadFile): The uploaded image file.
+        folder (str): 'profiles' or 'goals'
 
     Returns:
-        str: Public URL of the uploaded image.
+        str: The relative path to the uploaded file.
 
     Raises:
         HTTPException: 400 if file type is not allowed or file exceeds 2 MB.
-        HTTPException: 503 if Supabase Storage upload fails.
+        HTTPException: 500 if file upload fails.
     """
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {file.content_type}. Use JPG, PNG, or WebP.",
+            detail=f"Unsupported file type: {file.content_type}. Use JPG, PNG, or WebP."
         )
-
+    
     file_bytes = await file.read()
-
     if len(file_bytes) > MAX_FILE_SIZE_BYTES:
         raise HTTPException(
             status_code=400,
-            detail="File exceeds the 2 MB size limit.",
+            detail="File exceeds the 2 MB size limit."
         )
-
+    
+    # Generate unique filename
     extension = file.filename.rsplit(".", 1)[-1].lower()
-    unique_filename = f"{folder}/{uuid.uuid4()}.{extension}"
-
+    unique_filename = f"{uuid.uuid4()}.{extension}"
+    
+    # Determine folder
+    if folder == "profiles":
+        save_dir = PROFILE_DIR
+    elif folder == "goals":
+        save_dir = GOALS_DIR
+    else:
+        save_dir = UPLOAD_DIR
+    
+    # Save file
+    file_path = os.path.join(save_dir, unique_filename)
     try:
-        print("DEBUG bucket:", repr(SUPABASE_BUCKET))
-        print("DEBUG url:", repr(SUPABASE_URL))
-        print("DEBUG key starts with:", repr(SUPABASE_KEY[:10]) if SUPABASE_KEY else "NONE")
-        print("DEBUG filename:", repr(unique_filename))
-
-
-        supabase = get_supabase_client()
-
-        
-        # v2.x upload syntax — returns a response object directly
-        response = supabase.storage.from_(SUPABASE_BUCKET).upload(
-            path=unique_filename,
-            file=file_bytes,
-            file_options={"content-type": file.content_type, "upsert": "false"},
-        )
-
-
-
-        # Check for errors in the response
-        if hasattr(response, "error") and response.error:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Image upload failed: {response.error}",
-            )
-
-        # Get public URL
-        url_response = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(unique_filename)
-
-        # v2.x returns the URL as a plain string
-        if isinstance(url_response, str):
-            return url_response
-        # Fallback — some versions return an object
-        return url_response.public_url
-
-        print("DEBUG upload response type:", type(response))
-        print("DEBUG upload response:", response)
-
-    except HTTPException:
-        raise
+        with open(file_path, "wb") as f:
+            f.write(file_bytes)
     except Exception as e:
         raise HTTPException(
-            status_code=503,
-            detail=f"Image upload failed: {str(e)}",
+            status_code=500,
+            detail=f"Failed to save image: {str(e)}"
         )
+    
+    # Return the relative path for database storage
+    relative_path = f"uploads/{folder}/{unique_filename}"
+    return relative_path
 
-def delete_image(image_url: str) -> None:
+
+def delete_image(image_path: str) -> None:
     """
-    Delete an image from Supabase Storage by its public URL.
+    Delete an image from local storage.
 
     Args:
-        image_url (str): The full public URL of the image to delete.
+        image_path (str): The relative path to the image file.
+    """
+    if not image_path:
+        return
+    
+    try:
+        # Ensure we're deleting from the correct location
+        if image_path.startswith("uploads/"):
+            full_path = os.path.join(BASE_DIR, image_path)
+        else:
+            full_path = os.path.join(BASE_DIR, "uploads", image_path)
+        
+        if os.path.exists(full_path):
+            os.remove(full_path)
+    except Exception:
+        pass  # Silently fail if file doesn't exist
+
+
+def get_image_url(image_path: str) -> str:
+    """
+    Get the full URL for an image.
+
+    Args:
+        image_path (str): The relative path to the image.
 
     Returns:
-        None
+        str: The full URL to access the image.
     """
-    try:
-        marker = f"{SUPABASE_BUCKET}/"
-        if marker in image_url:
-            file_path = image_url.split(marker, 1)[1]
-            # Strip query params if any
-            file_path = file_path.split("?")[0]
-            supabase = get_supabase_client()
-            supabase.storage.from_(SUPABASE_BUCKET).remove([file_path])
-    except Exception:
-        pass
+    if not image_path:
+        return None
+    
+    # Return the path for the static file serving endpoint
+    return f"/static/{image_path}"
