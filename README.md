@@ -93,7 +93,6 @@ mero_kharcha/
     │   ├── calendar_bs.py         # AD <-> BS calendar conversion
     │   ├── admin.py                # Read-only admin monitoring
     │   ├── ocr_receipt.py          # OCR receipt scanning
-    │   └── chatbot.py              # Rule-based Q&A chatbot
     ├── sql_Alchemy_db_model/       # SQLAlchemy ORM models
     │   ├── base.py
     │   ├── expense_models.py
@@ -109,6 +108,16 @@ mero_kharcha/
         ├── login.py                # POST /auth/login, /auth/login/google
         ├── forgot_password.py      # POST /auth/forgot-password, /reset-password
         └── token_refresh.py        # POST /auth/refresh
+└── frontend/                       # Vue 3 + Quasar mobile application
+    ├── src/
+    │   ├── api.js                  # Axios instance with JWT interceptor
+    │   ├── router/                 # Vue Router routes
+    │   ├── stores/                 # Pinia stores
+    │   ├── pages/                  # Dashboard, Goals, Login, Signup,
+    │   │                           # Reset Password, Imports, Privacy, Terms
+    │   └── components/             # Shared components
+    ├── vite.config.js
+    └── package.json
 ```
 
 ## Author
